@@ -359,12 +359,12 @@ func (client *Client) input() {
 		}
 	}
 
-	// It's should not goes here
 	// Terminate pending calls.
+	// This is used for Subscribe in VSOA
 	if client.ServerMessageChan != nil {
 		req := protocol.NewMessage()
-		req.SetMessageType(protocol.TypeRPC)
-		req.SetStatusType(protocol.StatusSuccess)
+		req.SetMessageType(protocol.TypePublish)
+		req.SetStatusType(protocol.StatusNoResponding)
 		client.handleServerRequest(req)
 	}
 

@@ -29,7 +29,7 @@ func StatusText(code StatusType) string {
 	case StatusSuccess:
 		return "Success"
 	case StatusPassword:
-		return "Password"
+		return "Password error"
 	case StatusInvalidUrl:
 		return "Invalid URL"
 	case StatusNoResponding:
