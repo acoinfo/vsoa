@@ -12,8 +12,13 @@ package protocol
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 )
+
+type TestParam struct {
+	Password string `json:"passwd"`
+}
 
 func TestMessage(t *testing.T) {
 	req := NewMessage()
@@ -24,7 +29,8 @@ func TestMessage(t *testing.T) {
 	req.SetSeqNo(1234567890)
 
 	req.URL = []byte("vsoa://test-message/v1")
-	req.Param = []byte("{\"password\":\"123456\"}")
+	// Use json.RawMessage to fill Param;
+	req.Param, _ = json.RawMessage(`{"passwd":"123456"}`).MarshalJSON()
 	req.Data = []byte{
 		0xff, 0xee, 0xdd,
 	}
@@ -41,6 +47,8 @@ func TestMessage(t *testing.T) {
 	}
 	res.SetReply(true)
 
+	res.Decode(&buf)
+
 	if res.Version() != version {
 		t.Errorf("expect %d but got %d", version, res.Version())
 	}
@@ -53,8 +61,20 @@ func TestMessage(t *testing.T) {
 		t.Errorf("got wrong URL: %v", res.URL)
 	}
 
-	if string(res.Param) != "{\"password\":\"123456\"}" {
-		t.Errorf("got wrong Param: %v", res.Param)
+	DstParam := new(TestParam)
+	err = json.Unmarshal(res.Param, DstParam)
+	if err != nil {
+		t.Error("Unmarshal Param JSON err: ", err)
+	}
+	if DstParam.Password != "123456" {
+		t.Errorf("got wrong Param: %v", DstParam.Password)
+	}
+
+	infostr := "Golang VSOA server"
+	infoParam := new(ServInfoResParam)
+	err = json.Unmarshal([]byte(infostr), infoParam)
+	if err != nil {
+		t.Log("Unmarshal Param JSON err: ", err)
 	}
 
 	if hex.EncodeToString(res.Data) != hex.EncodeToString([]byte{

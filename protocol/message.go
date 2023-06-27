@@ -11,6 +11,7 @@ package protocol
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go-vsoa/utils"
@@ -49,7 +50,7 @@ const (
 type Message struct {
 	*Header
 	URL   []byte
-	Param []byte
+	Param json.RawMessage // It's []byte but have Marshal & UnMarshal method.
 	Data  []byte
 }
 
@@ -143,6 +144,16 @@ func (h Header) MessageRpcMethod() RpcMessageType {
 // MessageRpcMethod returns the rpc method in text.
 func (h Header) MessageRpcMethodText() string {
 	return RpcMethodText(h.MessageRpcMethod())
+}
+
+// MessageRpcMethod returns the rpc method.
+// If it's not a RPC message in VSOA then it return 0xee
+func (h *Header) SetMessageRpcMethod(t RpcMessageType) {
+	if t == RpcMethodGet {
+		h[2] &^= 0x4
+	} else {
+		h[2] |= 0x4
+	}
 }
 
 // Internel use padLen return the pad length for 4 byte pad for whole massage.
@@ -402,6 +413,18 @@ func (m *Message) Decode(r io.Reader) error {
 		m.Data = make([]byte, dL)
 	}
 	_, err = io.ReadFull(r, m.Data)
+	if err != nil {
+		return err
+	}
+
+	var zeros []byte
+	if cap(zeros) >= padL {
+		zeros = zeros[:padL]
+	} else {
+		zeros = make([]byte, padL)
+	}
+
+	_, err = io.ReadFull(r, zeros)
 	if err != nil {
 		return err
 	}
