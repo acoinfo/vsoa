@@ -55,8 +55,8 @@ type seqKey struct{}
 type VsoaClient interface {
 	// connect & shack hand with VSOA server
 	Connect(network, address string) error
-	// async func for RPC call
-	GoRpc(mt protocol.MessageType, URL string, serviceMethod protocol.RpcMessageType, param *json.RawMessage, data []byte, done chan *RpcCall) *RpcCall
+	// async func for VSOA call
+	Go(mt protocol.MessageType, URL string, serviceMethod protocol.RpcMessageType, param *json.RawMessage, data []byte, done chan *RpcCall) *RpcCall
 	// sync func wait answer
 	Call(ctx context.Context, servicePath, serviceMethod string, args interface{}, reply interface{}) error
 	// send raw message without any codec
@@ -148,7 +148,7 @@ func (client *Client) IsShutdown() bool {
 // the invocation. The done channel will signal when the call is complete by returning
 // the same Call object. If done is nil, Go will allocate a new channel.
 // If non-nil, done must be buffered or Go will deliberately crash.
-func (client *Client) GoRpc(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message, reply *protocol.Message, done chan *RpcCall) *RpcCall {
+func (client *Client) Go(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message, reply *protocol.Message, done chan *RpcCall) *RpcCall {
 	call := new(RpcCall)
 	call.URL = string(req.URL)
 	call.ServiceMethod = serviceMethod
@@ -190,7 +190,7 @@ func (client *Client) Call(mt protocol.MessageType, serviceMethod protocol.RpcMe
 func (client *Client) call(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message) (*protocol.Message, error) {
 	reply := protocol.NewMessage()
 
-	Done := client.GoRpc(mt, serviceMethod, req, reply, make(chan *RpcCall, 1)).Done
+	Done := client.Go(mt, serviceMethod, req, reply, make(chan *RpcCall, 1)).Done
 	var err error
 	select {
 	case call := <-Done:
