@@ -31,16 +31,10 @@ func TestRPCAsync(t *testing.T) {
 
 	req1 := protocol.NewMessage()
 	req2 := protocol.NewMessage()
-	req3 := protocol.NewMessage()
-	req4 := protocol.NewMessage()
-	req5 := protocol.NewMessage()
 	reply := protocol.NewMessage()
 
 	req1.URL = []byte("/a/b/c")
 	req2.URL = []byte("/a/b/c")
-	req3.URL = []byte("/a/b/c")
-	req4.URL = []byte("/a/b/c")
-	req5.URL = []byte("/a/b/c")
 
 	biddata := &RpcAsyncTestParam{
 		BigData: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
