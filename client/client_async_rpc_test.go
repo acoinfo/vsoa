@@ -51,39 +51,31 @@ func TestRPCAsync(t *testing.T) {
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
-	// TODO: we expact to send Call1 with Data "AAA..A" Call2 to send Data "BBB..B".
-	// But it send unordered.
-	// The Reason is inside Go func client sync the seq but async fill in reqs
+	// Actually We don't need to care Call1 using seq:1 or not, since it's async call
 	Call1 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
 	Call2 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
 
-	// Even data in Call be unordered. NodeJS server send the right data back to client, A for A, B for B.
-	select {
-	case call := <-Call1:
-		err = call.Error
-		reply = call.Reply
-		SrcParam := new(RpcAsyncTestParam)
-		json.Unmarshal(*call.Param, SrcParam)
-		DstParam := new(RpcAsyncTestParam)
-		json.Unmarshal(reply.Param, DstParam)
-		if SrcParam.BigData == DstParam.BigData {
-			t.Log("Reply seq No:", reply.SeqNo(), "Data like: ", DstParam.BigData[:1])
-		} else {
-			t.Fatal("error Date miss match")
+	for i := 0; i < 2; i++ {
+		select {
+		case call := <-Call1:
+			t.Log("Call1 Data should be like A")
+			logAsyncCall(call, t)
+		case call := <-Call2:
+			t.Log("Call2 Data should be like B")
+			logAsyncCall(call, t)
 		}
 	}
-	select {
-	case call := <-Call2:
-		err = call.Error
-		reply = call.Reply
-		SrcParam := new(RpcAsyncTestParam)
-		json.Unmarshal(*call.Param, SrcParam)
-		DstParam := new(RpcAsyncTestParam)
-		json.Unmarshal(reply.Param, DstParam)
-		if SrcParam.BigData == DstParam.BigData {
-			t.Log("Reply seq No:", reply.SeqNo(), "Data like: ", DstParam.BigData[:1])
-		} else {
-			t.Fatal("error Date miss match")
-		}
+}
+
+func logAsyncCall(call *RpcCall, t *testing.T) {
+	reply := call.Reply
+	SrcParam := new(RpcAsyncTestParam)
+	json.Unmarshal(*call.Param, SrcParam)
+	DstParam := new(RpcAsyncTestParam)
+	json.Unmarshal(reply.Param, DstParam)
+	if SrcParam.BigData == DstParam.BigData {
+		t.Log("Data like: ", DstParam.BigData[:1])
+	} else {
+		t.Fatal("error Date miss match")
 	}
 }
