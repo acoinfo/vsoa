@@ -4,17 +4,17 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"go-vsoa/protocol"
 	"log"
 	"net"
 )
 
 // Connect connects the server via specified network.
-func (client *Client) Connect(network, address string) error {
+// ServInfo Shack hand is needed cause VSOA protocol
+func (client *Client) Connect(network, address string) (ServerInfo string, err error) {
 	var conn net.Conn
-	var err error
 
 	switch network {
-
 	default:
 		conn, err = newDirectConn(client, network, address)
 
@@ -28,7 +28,15 @@ func (client *Client) Connect(network, address string) error {
 		}
 	}
 
-	return err
+	req := protocol.NewMessage()
+	reply := protocol.NewMessage()
+
+	reply, err = client.Call(protocol.TypeServInfo, protocol.RpcMethodGet, req)
+	if err != nil {
+		return "", err
+	}
+
+	return protocol.DecodeServInfo(reply.Param), err
 }
 
 func newDirectConn(c *Client, network, address string) (net.Conn, error) {

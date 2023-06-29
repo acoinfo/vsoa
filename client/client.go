@@ -78,8 +78,9 @@ type VsoaClient interface {
 type Client struct {
 	option Option
 
-	Conn  net.Conn
-	QConn net.Conn
+	Conn net.Conn
+	// Quick Datagram/Publish goes UDPs
+	QConn net.UDPConn
 	r     *bufio.Reader
 	// w    *bufio.Writer
 
