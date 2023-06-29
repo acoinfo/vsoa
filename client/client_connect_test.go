@@ -22,7 +22,7 @@ func TestGoodConnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else {
-		t.Log("SrvInfo:", SrvInfo)
+		t.Log("SrvInfo:", SrvInfo, "ClientUid:", c.GetUid())
 	}
 	defer c.Close()
 }

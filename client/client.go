@@ -77,6 +77,7 @@ type VsoaClient interface {
 // Client represents a VSOA client. (For NOW it's only RPC&ServInfo)
 type Client struct {
 	option Option
+	uid    uint32
 
 	Conn net.Conn
 	// Quick Datagram/Publish goes UDPs
@@ -98,6 +99,10 @@ func NewClient(option Option) *Client {
 	return &Client{
 		option: option,
 	}
+}
+
+func (c *Client) GetUid() uint32 {
+	return c.uid
 }
 
 // Option contains all options for creating clients.

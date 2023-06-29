@@ -36,6 +36,7 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 		return "", err
 	}
 
+	client.uid = protocol.GetClientUid(reply.Data)
 	return protocol.DecodeServInfo(reply.Param), err
 }
 

@@ -9,7 +9,10 @@
 
 package protocol
 
-import "encoding/json"
+import (
+	"encoding/binary"
+	"encoding/json"
+)
 
 type ServInfoReqParam struct {
 	Password     string `json:"passwd,omitempty"`
@@ -20,6 +23,10 @@ type ServInfoReqParam struct {
 
 type ServInfoResParam struct {
 	Info string `json:"info"` // it should be JSON, but in real world it's a string
+}
+
+type ServInfoResData struct {
+	ClientUid uint32 // this is used for Client to now it's Uid for the point server
 }
 
 const (
@@ -61,4 +68,8 @@ func DecodeServInfo(m json.RawMessage) string {
 	} else {
 		return infoParam.Info
 	}
+}
+
+func GetClientUid(u []byte) uint32 {
+	return binary.BigEndian.Uint32(u)
 }
