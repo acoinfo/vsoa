@@ -38,12 +38,12 @@ func TestRPCAsync(t *testing.T) {
 
 	biddata := &RpcAsyncTestParam{
 		// 255KB Param
-		BigData: string(*makeLargeByteArray('A')),
+		BigData: string(*makeLargeByteArray('A', 255)),
 	}
 	req1.Param, _ = json.Marshal(biddata)
 	biddata = &RpcAsyncTestParam{
 		// 255KB Param
-		BigData: string(*makeLargeByteArray('B')),
+		BigData: string(*makeLargeByteArray('B', 255)),
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
@@ -87,11 +87,13 @@ func TestRPCMixed(t *testing.T) {
 	req2.URL = []byte("/a/b/c")
 
 	biddata := &RpcAsyncTestParam{
-		BigData: string(*makeLargeByteArray('A')),
+		// Larger than 256KB Message Test
+		BigData: string(*makeLargeByteArray('A', 256)),
 	}
 	req1.Param, _ = json.Marshal(biddata)
 	biddata = &RpcAsyncTestParam{
-		BigData: string(*makeLargeByteArray('B')),
+		// Larger than 256KB Message Test
+		BigData: string(*makeLargeByteArray('B', 256)),
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
@@ -119,8 +121,18 @@ func TestRPCMixed(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		select {
-		case <-Call1:
-		case <-Call2:
+		case replyCall := <-Call1:
+			if replyCall.Error == protocol.ErrMessageTooLong {
+				t.Logf("passed ErrMessageTooLong test")
+			} else {
+				t.Fatalf("failed to test ErrMessageTooLong real err  like: %v", replyCall.Error)
+			}
+		case replyCall := <-Call2:
+			if replyCall.Error == protocol.ErrMessageTooLong {
+				t.Logf("passed ErrMessageTooLong test")
+			} else {
+				t.Fatalf("failed to test ErrMessageTooLong real err  like: %v", replyCall.Error)
+			}
 		}
 	}
 
@@ -134,20 +146,20 @@ func TestRPCMixed(t *testing.T) {
 	}
 }
 
-func makeLargeByteArray(raw byte) *[]byte {
-	var _255KB int = 1024 * 255
-	buffer := make([]byte, _255KB)
+func makeLargeByteArray(raw byte, KB int) *[]byte {
+	var _KB int = 1024 * KB
+	buffer := make([]byte, _KB)
 	tmp := make([]byte, 1)
 	tmp[0] = raw
 
-	for i := 0; i < _255KB; i++ {
+	for i := 0; i < _KB; i++ {
 		copy(buffer[i:], tmp)
 	}
 
 	return &buffer
 }
 
-func logAsyncCall(call *RpcCall, t *testing.T) {
+func logAsyncCall(call *Call, t *testing.T) {
 	reply := call.Reply
 	SrcParam := new(RpcAsyncTestParam)
 	json.Unmarshal(*call.Param, SrcParam)

@@ -48,6 +48,8 @@ const (
 	ServerError = "__vsoa_error__"
 )
 
+type QuickChannelFlag bool
+
 type Message struct {
 	*Header
 	URL   []byte
@@ -215,14 +217,15 @@ func (m Message) Clone() *Message {
 }
 
 // Encode encodes messages.
-// Message cannot check it too long or not. cause only clinet know it quick channel or not.
-func (m Message) Encode() []byte {
-	rawMessage := m.encodeSlicePointer()
-	return *rawMessage
+// Message can check it too long or not. Client/Server need to give the info of this Message is Quick or not.
+func (m Message) Encode(q QuickChannelFlag) ([]byte, error) {
+	rawMessage, err := m.encodeSlicePointer(q)
+	return *rawMessage, err
 }
 
 // EncodeSlicePointer encodes messages as a byte slice pointer we can use pool to improve.
-func (m Message) encodeSlicePointer() *[]byte {
+// Stream not using this.
+func (m Message) encodeSlicePointer(q QuickChannelFlag) (*[]byte, error) {
 	uL := len(m.URL)
 	pL := len(m.Param)
 	dL := len(m.Data)
@@ -237,7 +240,15 @@ func (m Message) encodeSlicePointer() *[]byte {
 	}
 
 	// We need to check Message len by type before send it,
-	// But Message don't kown why is it Quick or not, so client needs to do it.
+	if q == false {
+		if totalL > MaxMessageLength {
+			return bufferPool.Get(1), ErrMessageTooLong
+		}
+	} else {
+		if totalL > MaxQMessageLength {
+			return bufferPool.Get(1), ErrMessageTooLong
+		}
+	}
 
 	urlStart := HdrLength + 2 + 4 + 4
 	paramStart := urlStart + uL
@@ -257,7 +268,7 @@ func (m Message) encodeSlicePointer() *[]byte {
 	copy((*rawMessage)[paramStart:paramStart+pL], m.Param)
 	copy((*rawMessage)[dataStart:dataStart+dL], m.Data)
 
-	return rawMessage
+	return rawMessage, nil
 }
 
 // PutData puts the byte slice into pool.

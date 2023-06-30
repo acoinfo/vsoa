@@ -56,7 +56,7 @@ type VsoaClient interface {
 	// connect & shack hand with VSOA server
 	Connect(network, address string) error
 	// async func for VSOA call
-	Go(mt protocol.MessageType, URL string, serviceMethod protocol.RpcMessageType, param *json.RawMessage, data []byte, done chan *RpcCall) *RpcCall
+	Go(mt protocol.MessageType, URL string, serviceMethod protocol.RpcMessageType, param *json.RawMessage, data []byte, done chan *Call) *Call
 	// sync func wait answer
 	Call(ctx context.Context, servicePath, serviceMethod string, args interface{}, reply interface{}) error
 	// send raw message without any codec
@@ -87,7 +87,7 @@ type Client struct {
 
 	mutex    sync.Mutex // protects following
 	seq      uint32
-	pending  map[uint32]*RpcCall
+	pending  map[uint32]*Call
 	closing  bool // user has called Close
 	shutdown bool // server has told us to stop
 
@@ -117,17 +117,19 @@ type Option struct {
 }
 
 // Call represents an active RPC.
-type RpcCall struct {
-	URL           string                  // The Server URL
-	ServiceMethod protocol.RpcMessageType // The name of the service and method to call.
+type Call struct {
+	URL           string                    // The Server URL
+	VsoaType      protocol.MessageType      // The real method when VSOA call out
+	ServiceMethod protocol.RpcMessageType   // The name of the service and method to call.
+	IsQuick       protocol.QuickChannelFlag //For Datagram/Publish to kown it's UDP channel or not
 	Data          []byte
 	Param         *json.RawMessage
 	Reply         *protocol.Message
-	Error         error         // After completion, the error status.
-	Done          chan *RpcCall // Strobes when call is complete.
+	Error         error      // After completion, the error status.
+	Done          chan *Call // Strobes when call is complete.
 }
 
-func (call *RpcCall) done() {
+func (call *Call) done() {
 	select {
 	case call.Done <- call:
 		// ok
@@ -154,17 +156,33 @@ func (client *Client) IsShutdown() bool {
 // the invocation. The done channel will signal when the call is complete by returning
 // the same Call object. If done is nil, Go will allocate a new channel.
 // If non-nil, done must be buffered or Go will deliberately crash.
-func (client *Client) Go(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message, reply *protocol.Message, done chan *RpcCall) *RpcCall {
-	call := new(RpcCall)
+func (client *Client) Go(mt protocol.MessageType, flags any, req *protocol.Message, reply *protocol.Message, done chan *Call) *Call {
+	call := new(Call)
 	call.URL = string(req.URL)
-	call.ServiceMethod = serviceMethod
+
+	call.IsQuick = false
+	call.ServiceMethod = protocol.RpcMethodGet
+
+	switch flags.(type) {
+	case protocol.RpcMessageType:
+		if mt == protocol.TypeRPC {
+			call.ServiceMethod = flags.(protocol.RpcMessageType)
+		}
+	case protocol.QuickChannelFlag:
+		if mt == protocol.TypeDatagram || mt == protocol.TypePublish {
+			// This is used for UDP Quick chennels
+			call.IsQuick = flags.(protocol.QuickChannelFlag)
+		}
+	default:
+		// Do nothing
+	}
 
 	call.Param = &req.Param
 	call.Data = req.Data
 
 	call.Reply = reply
 	if done == nil {
-		done = make(chan *RpcCall, 10) // buffered.
+		done = make(chan *Call, 10) // buffered.
 	} else {
 		// If caller passes done != nil, it must arrange that
 		// done has enough buffer for the number of simultaneous
@@ -178,9 +196,11 @@ func (client *Client) Go(mt protocol.MessageType, serviceMethod protocol.RpcMess
 
 	switch mt {
 	case protocol.TypeServInfo:
-		go client.sendSrvInfo(call) // Internal use
+		go client.sendSrvInfo(call) // Internal use mostly, But still user can call it,
 	case protocol.TypeRPC:
-		go client.sendRpc(call)
+		fallthrough
+	case protocol.TypeDatagram:
+		go client.send(call)
 	default:
 		return call // We just return done
 	}
@@ -189,14 +209,14 @@ func (client *Client) Go(mt protocol.MessageType, serviceMethod protocol.RpcMess
 }
 
 // Call invokes the named function, waits for it to complete, and returns its error status.
-func (client *Client) Call(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message) (*protocol.Message, error) {
-	return client.call(mt, serviceMethod, req)
+func (client *Client) Call(mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
+	return client.call(mt, flags, req)
 }
 
-func (client *Client) call(mt protocol.MessageType, serviceMethod protocol.RpcMessageType, req *protocol.Message) (*protocol.Message, error) {
+func (client *Client) call(mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
 	reply := protocol.NewMessage()
 
-	Done := client.Go(mt, serviceMethod, req, reply, make(chan *RpcCall, 1)).Done
+	Done := client.Go(mt, flags, req, reply, make(chan *Call, 1)).Done
 	var err error
 	select {
 	case call := <-Done:
@@ -208,7 +228,7 @@ func (client *Client) call(mt protocol.MessageType, serviceMethod protocol.RpcMe
 
 // Client send SrvInfo message
 // Internal use for
-func (client *Client) sendSrvInfo(call *RpcCall) {
+func (client *Client) sendSrvInfo(call *Call) {
 	// Register this call.
 	client.mutex.Lock()
 	if client.shutdown || client.closing {
@@ -219,7 +239,7 @@ func (client *Client) sendSrvInfo(call *RpcCall) {
 	}
 
 	if client.pending == nil {
-		client.pending = make(map[uint32]*RpcCall)
+		client.pending = make(map[uint32]*Call)
 	}
 
 	m := &protocol.ServInfoReqParam{
@@ -232,13 +252,23 @@ func (client *Client) sendSrvInfo(call *RpcCall) {
 	seq := client.seq
 	client.seq++
 	client.pending[seq] = call
-	client.mutex.Unlock()
 
 	req := protocol.NewMessage()
 	m.NewMessage(req)
 	req.SetSeqNo(seq)
 
-	_, err := client.Conn.Write(req.Encode())
+	tmp, err := req.Encode(false)
+	if err != nil {
+		call = client.pending[seq]
+		delete(client.pending, seq)
+		call.Error = err
+		client.mutex.Unlock()
+		call.done()
+		return
+	}
+	client.mutex.Unlock()
+
+	_, err = client.Conn.Write(tmp)
 
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
@@ -263,8 +293,8 @@ func (client *Client) sendSrvInfo(call *RpcCall) {
 	return
 }
 
-// Client send RPC message
-func (client *Client) sendRpc(call *RpcCall) {
+// Client send RPC/Datagarm message
+func (client *Client) send(call *Call) {
 	// Register this call.
 	client.mutex.Lock()
 	if client.shutdown || client.closing {
@@ -275,28 +305,34 @@ func (client *Client) sendRpc(call *RpcCall) {
 	}
 
 	if client.pending == nil {
-		client.pending = make(map[uint32]*RpcCall)
+		client.pending = make(map[uint32]*Call)
 	}
 
 	seq := client.seq
 	client.seq++
 	client.pending[seq] = call
-	client.mutex.Unlock()
 
 	req := protocol.NewMessage()
 	req.SetMessageType(protocol.TypeRPC)
 	req.SetMessageRpcMethod(call.ServiceMethod)
 	req.SetSeqNo(seq)
 
-	if call.Param != nil {
-		req.Param = *call.Param
-	}
-
 	req.URL = []byte(call.URL)
 	req.Param = *call.Param
 	req.Data = call.Data
 
-	_, err := client.Conn.Write(req.Encode())
+	tmp, err := req.Encode(call.IsQuick)
+	if err != nil {
+		call = client.pending[seq]
+		delete(client.pending, seq)
+		call.Error = err
+		client.mutex.Unlock()
+		call.done()
+		return
+	}
+	client.mutex.Unlock()
+
+	_, err = client.Conn.Write(tmp)
 
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
@@ -333,7 +369,7 @@ func (client *Client) input() {
 		}
 
 		seq := res.SeqNo()
-		var call *RpcCall
+		var call *Call
 		isServerMessage := (res.IsReply() == false)
 		if !isServerMessage {
 			client.mutex.Lock()
