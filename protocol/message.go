@@ -214,6 +214,7 @@ func (m Message) Clone() *Message {
 }
 
 // Encode encodes messages.
+// TODO: since VSOA has limit, so Encode can be error when it's a wrong message
 func (m Message) Encode() []byte {
 	rawMessage := m.encodeSlicePointer()
 	return *rawMessage
@@ -341,6 +342,7 @@ func (m *Message) Decode(r io.Reader) error {
 		return err
 	}
 	if !m.Header.CheckMagicNumber() {
+		// should never goes here
 		return fmt.Errorf("wrong magic number: %v", m.Header[0])
 	}
 
@@ -380,10 +382,14 @@ func (m *Message) Decode(r io.Reader) error {
 	totalL := HdrLength + 2 + 4 + 4 + uL + pL + dL + padL
 
 	if totalL&3 != 0 {
+		// this cause remain unread buffered date in the Reader cause unexpact behavior for next message.
+		// TODO: avoid this behavior
 		return ErrMessageUnPad
 	}
 
 	if totalL > MaxMessageLength {
+		// this cause remain unread buffered date in the Reader cause unexpact behavior for next message.
+		// TODO: avoid this behavior
 		return ErrMessageTooLong
 	}
 
