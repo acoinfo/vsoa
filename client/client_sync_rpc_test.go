@@ -32,9 +32,7 @@ func TestRPC(t *testing.T) {
 	req := protocol.NewMessage()
 	reply := protocol.NewMessage()
 
-	req.URL = []byte("/a/b/c")
-
-	reply, err = c.Call(protocol.TypeRPC, protocol.RpcMethodGet, req)
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -43,7 +41,7 @@ func TestRPC(t *testing.T) {
 
 	req.Param, _ = json.RawMessage(`{"Test Num":123}`).MarshalJSON()
 
-	reply, err = c.Call(protocol.TypeRPC, protocol.RpcMethodGet, req)
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req)
 	if err != nil {
 		t.Fatal(err)
 	} else {

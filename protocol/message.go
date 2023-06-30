@@ -52,7 +52,7 @@ type QuickChannelFlag bool
 
 type Message struct {
 	*Header
-	URL   []byte
+	URL   []byte          // We call it URL but it more likely to be the server PATH for rpcx users
 	Param json.RawMessage // It's []byte but have Marshal & UnMarshal method.
 	Data  []byte
 }

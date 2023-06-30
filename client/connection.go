@@ -31,7 +31,7 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 	req := protocol.NewMessage()
 	reply := protocol.NewMessage()
 
-	reply, err = client.Call(protocol.TypeServInfo, protocol.RpcMethodGet, req)
+	reply, err = client.Call("", protocol.TypeServInfo, protocol.RpcMethodGet, req)
 	if err != nil {
 		return "", err
 	}

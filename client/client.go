@@ -156,9 +156,9 @@ func (client *Client) IsShutdown() bool {
 // the invocation. The done channel will signal when the call is complete by returning
 // the same Call object. If done is nil, Go will allocate a new channel.
 // If non-nil, done must be buffered or Go will deliberately crash.
-func (client *Client) Go(mt protocol.MessageType, flags any, req *protocol.Message, reply *protocol.Message, done chan *Call) *Call {
+func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *protocol.Message, reply *protocol.Message, done chan *Call) *Call {
 	call := new(Call)
-	call.URL = string(req.URL)
+	call.URL = URL // prase the URL when go func "send"
 
 	call.IsQuick = false
 	call.ServiceMethod = protocol.RpcMethodGet
@@ -209,14 +209,14 @@ func (client *Client) Go(mt protocol.MessageType, flags any, req *protocol.Messa
 }
 
 // Call invokes the named function, waits for it to complete, and returns its error status.
-func (client *Client) Call(mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
-	return client.call(mt, flags, req)
+func (client *Client) Call(URL string, mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
+	return client.call(URL, mt, flags, req)
 }
 
-func (client *Client) call(mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
+func (client *Client) call(URL string, mt protocol.MessageType, flags any, req *protocol.Message) (*protocol.Message, error) {
 	reply := protocol.NewMessage()
 
-	Done := client.Go(mt, flags, req, reply, make(chan *Call, 1)).Done
+	Done := client.Go(URL, mt, flags, req, reply, make(chan *Call, 1)).Done
 	var err error
 	select {
 	case call := <-Done:

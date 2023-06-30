@@ -33,9 +33,6 @@ func TestRPCAsync(t *testing.T) {
 	req2 := protocol.NewMessage()
 	reply := protocol.NewMessage()
 
-	req1.URL = []byte("/a/b/c")
-	req2.URL = []byte("/a/b/c")
-
 	biddata := &RpcAsyncTestParam{
 		// 255KB Param
 		BigData: string(*makeLargeByteArray('A', 255)),
@@ -48,8 +45,8 @@ func TestRPCAsync(t *testing.T) {
 	req2.Param, _ = json.Marshal(biddata)
 
 	// Actually We don't need to care Call1 using seq:1 or not, since it's async call
-	Call1 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
-	Call2 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
+	Call1 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
+	Call2 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
 
 	for i := 0; i < 2; i++ {
 		select {
@@ -82,10 +79,6 @@ func TestRPCMixed(t *testing.T) {
 	req2 := protocol.NewMessage()
 	reply := protocol.NewMessage()
 
-	reqSync.URL = []byte("/a/b/c")
-	req1.URL = []byte("/a/b/c")
-	req2.URL = []byte("/a/b/c")
-
 	biddata := &RpcAsyncTestParam{
 		// Larger than 256KB Message Test
 		BigData: string(*makeLargeByteArray('A', 256)),
@@ -97,7 +90,7 @@ func TestRPCMixed(t *testing.T) {
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
-	reply, err = c.Call(protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -107,10 +100,10 @@ func TestRPCMixed(t *testing.T) {
 	}
 
 	// Actually We don't need to care Call1 using seq:1 or not, since it's async call
-	Call1 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
-	Call2 := c.Go(protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
+	Call1 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
+	Call2 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
 
-	reply, err = c.Call(protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -136,7 +129,7 @@ func TestRPCMixed(t *testing.T) {
 		}
 	}
 
-	reply, err = c.Call(protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
 	if err != nil {
 		t.Fatal(err)
 	} else {
