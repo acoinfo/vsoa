@@ -37,6 +37,7 @@ const (
 func (q ServInfoReqParam) NewMessage(req *Message) {
 	req.SetMessageType(TypeServInfo)
 	req.SetStatusType(StatusSuccess)
+	// TODO: Add real quick channel id to fill the Tunid
 	req.SetValidTunid()
 	req.SetReply(false)
 
