@@ -37,10 +37,12 @@ func TestRPCAsync(t *testing.T) {
 	req2.URL = []byte("/a/b/c")
 
 	biddata := &RpcAsyncTestParam{
+		// 255KB Param
 		BigData: string(*makeLargeByteArray('A')),
 	}
 	req1.Param, _ = json.Marshal(biddata)
 	biddata = &RpcAsyncTestParam{
+		// 255KB Param
 		BigData: string(*makeLargeByteArray('B')),
 	}
 	req2.Param, _ = json.Marshal(biddata)
@@ -52,10 +54,10 @@ func TestRPCAsync(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		select {
 		case call := <-Call1:
-			t.Log("Call1 Data should be like A")
+			t.Log("Call1 Data should be like A, Param LEN:", len(call.Reply.Param))
 			logAsyncCall(call, t)
 		case call := <-Call2:
-			t.Log("Call2 Data should be like B")
+			t.Log("Call2 Data should be like B, Param LEN:", len(call.Reply.Param))
 			logAsyncCall(call, t)
 		}
 	}
@@ -133,12 +135,12 @@ func TestRPCMixed(t *testing.T) {
 }
 
 func makeLargeByteArray(raw byte) *[]byte {
-	var _32KB int = 1024 * 32
-	buffer := make([]byte, _32KB)
+	var _255KB int = 1024 * 255
+	buffer := make([]byte, _255KB)
 	tmp := make([]byte, 1)
 	tmp[0] = raw
 
-	for i := 0; i < _32KB; i++ {
+	for i := 0; i < _255KB; i++ {
 		copy(buffer[i:], tmp)
 	}
 
