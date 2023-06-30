@@ -37,11 +37,11 @@ func TestRPCAsync(t *testing.T) {
 	req2.URL = []byte("/a/b/c")
 
 	biddata := &RpcAsyncTestParam{
-		BigData: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+		BigData: string(*makeLargeByteArray('A')),
 	}
 	req1.Param, _ = json.Marshal(biddata)
 	biddata = &RpcAsyncTestParam{
-		BigData: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+		BigData: string(*makeLargeByteArray('B')),
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
@@ -85,11 +85,11 @@ func TestRPCMixed(t *testing.T) {
 	req2.URL = []byte("/a/b/c")
 
 	biddata := &RpcAsyncTestParam{
-		BigData: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+		BigData: string(*makeLargeByteArray('A')),
 	}
 	req1.Param, _ = json.Marshal(biddata)
 	biddata = &RpcAsyncTestParam{
-		BigData: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+		BigData: string(*makeLargeByteArray('B')),
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
@@ -130,6 +130,19 @@ func TestRPCMixed(t *testing.T) {
 			t.Fatal("Not sync")
 		}
 	}
+}
+
+func makeLargeByteArray(raw byte) *[]byte {
+	var _32KB int = 1024 * 32
+	buffer := make([]byte, _32KB)
+	tmp := make([]byte, 1)
+	tmp[0] = raw
+
+	for i := 0; i < _32KB; i++ {
+		copy(buffer[i:], tmp)
+	}
+
+	return &buffer
 }
 
 func logAsyncCall(call *RpcCall, t *testing.T) {
