@@ -26,9 +26,10 @@ const (
 	version     byte = 0x2
 	magicNumber byte = magic | (version << 4)
 	/* VSOA package length limit */
-	HdrLength         = 10
-	MaxMessageLength  = 262144
-	MaxDataLength     = (MaxMessageLength - HdrLength)
+	HdrLength        = 10
+	MaxMessageLength = 262144
+	MaxDataLength    = (MaxMessageLength - HdrLength)
+	/* VSOA quick channel length limit */
 	MaxQMessageLength = 65507
 )
 
@@ -214,7 +215,7 @@ func (m Message) Clone() *Message {
 }
 
 // Encode encodes messages.
-// TODO: since VSOA has limit, so Encode can be error when it's a wrong message
+// Message cannot check it too long or not. cause only clinet know it quick channel or not.
 func (m Message) Encode() []byte {
 	rawMessage := m.encodeSlicePointer()
 	return *rawMessage
@@ -234,6 +235,9 @@ func (m Message) encodeSlicePointer() *[]byte {
 		padL = 4 - (totalL & 3)
 		totalL += padL
 	}
+
+	// We need to check Message len by type before send it,
+	// But Message don't kown why is it Quick or not, so client needs to do it.
 
 	urlStart := HdrLength + 2 + 4 + 4
 	paramStart := urlStart + uL
