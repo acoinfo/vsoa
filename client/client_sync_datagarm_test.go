@@ -33,7 +33,7 @@ func TestDatagram(t *testing.T) {
 
 	req.Param, _ = json.RawMessage(`{"Test Num":123}`).MarshalJSON()
 
-	_, err = c.Call("/datagram", protocol.TypeDatagram, protocol.ChannelSlow, req)
+	_, err = c.Call("/datagram", protocol.TypeDatagram, protocol.ChannelNormal, req)
 	if err != nil {
 		t.Fatal(err)
 	} else {

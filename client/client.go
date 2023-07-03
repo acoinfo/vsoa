@@ -257,7 +257,7 @@ func (client *Client) sendSrvInfo(call *Call) {
 	m.NewMessage(req)
 	req.SetSeqNo(seq)
 
-	tmp, err := req.Encode(false)
+	tmp, err := req.Encode(protocol.ChannelNormal)
 	if err != nil {
 		call = client.pending[seq]
 		delete(client.pending, seq)
@@ -321,7 +321,7 @@ func (client *Client) sendRPC(call *Call) {
 	req.Param = *call.Param
 	req.Data = call.Data
 
-	tmp, err := req.Encode(call.IsQuick)
+	tmp, err := req.Encode(protocol.ChannelNormal)
 	if err != nil {
 		call = client.pending[seq]
 		delete(client.pending, seq)

@@ -51,8 +51,8 @@ const (
 type QuickChannelFlag bool
 
 const (
-	ChannelQuick QuickChannelFlag = true
-	ChannelSlow  QuickChannelFlag = false
+	ChannelQuick  QuickChannelFlag = true
+	ChannelNormal QuickChannelFlag = false
 )
 
 type Message struct {
