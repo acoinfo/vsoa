@@ -18,7 +18,7 @@ const (
 	TypeSubscribe                      //VSOA subscribe
 	TypeUnsubscribe                    //VSOA cannel subscribe
 	TypePublish                        //VSOA Publish data to subscriber
-	TypeDatagram                       //VSOA Datagarm without resp
+	TypeDatagram                       //VSOA Datagram without resp
 	TypeQosSetup                       //Setup Qos for VSOA
 	TypePingEcho    MessageType = 0xff //VSOA internel ping call
 )

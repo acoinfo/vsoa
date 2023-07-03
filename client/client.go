@@ -198,9 +198,9 @@ func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *pr
 	case protocol.TypeServInfo:
 		go client.sendSrvInfo(call) // Internal use mostly, But still user can call it,
 	case protocol.TypeRPC:
-		fallthrough
+		go client.sendRPC(call)
 	case protocol.TypeDatagram:
-		go client.send(call)
+		go client.sendSingle(call)
 	default:
 		return call // We just return done
 	}
@@ -293,9 +293,9 @@ func (client *Client) sendSrvInfo(call *Call) {
 	return
 }
 
-// Client send RPC/Datagarm message
-func (client *Client) send(call *Call) {
-	// Register this call.
+// Client send RPC message
+func (client *Client) sendRPC(call *Call) {
+	// If it's RPC call Register this call.
 	client.mutex.Lock()
 	if client.shutdown || client.closing {
 		call.Error = ErrShutdown
@@ -353,6 +353,57 @@ func (client *Client) send(call *Call) {
 		}
 		return
 	}
+}
+
+// Client send Datagram(TCP) message
+func (client *Client) sendSingle(call *Call) {
+	// If it's Datagram call Set header's seq always be zero
+	client.mutex.Lock()
+	if client.shutdown || client.closing {
+		call.Error = ErrShutdown
+		client.mutex.Unlock()
+		call.done()
+		return
+	}
+
+	req := protocol.NewMessage()
+	req.SetMessageType(protocol.TypeDatagram)
+	req.SetSeqNo(0)
+
+	req.URL = []byte(call.URL)
+	req.Param = *call.Param
+	req.Data = call.Data
+
+	tmp, err := req.Encode(call.IsQuick)
+	if err != nil {
+		call.Error = err
+		client.mutex.Unlock()
+		call.done()
+		return
+	}
+	client.mutex.Unlock()
+
+	_, err = client.Conn.Write(tmp)
+
+	if err != nil {
+		if e, ok := err.(*net.OpError); ok {
+			if e.Err != nil {
+				err = fmt.Errorf("net.OpError: %s", e.Err.Error())
+			} else {
+				err = errors.New("net.OpError")
+			}
+
+		}
+		if call != nil {
+			call.Error = err
+			call.done()
+		}
+		return
+	}
+
+	// Datagram don't have respond
+	call.done()
+	return
 }
 
 var count int = 0

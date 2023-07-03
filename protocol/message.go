@@ -50,6 +50,11 @@ const (
 
 type QuickChannelFlag bool
 
+const (
+	ChannelQuick QuickChannelFlag = true
+	ChannelSlow  QuickChannelFlag = false
+)
+
 type Message struct {
 	*Header
 	URL   []byte          // We call it URL but it more likely to be the server PATH for rpcx users
