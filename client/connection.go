@@ -45,6 +45,7 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 		return "", err
 	}
 
+	// this is used for Quick channel
 	client.uid = protocol.GetClientUid(reply.Data)
 	return protocol.DecodeServInfo(reply.Param), err
 }
