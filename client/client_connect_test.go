@@ -18,7 +18,7 @@ func TestGoodConnect(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	SrvInfo, err := c.Connect("tcp", *addr)
+	SrvInfo, err := c.Connect("vsoa", *addr)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -35,7 +35,7 @@ func TestWorngPasswdConnect(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	_, err := c.Connect("tcp", *addr)
+	_, err := c.Connect("vsoa", *addr)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusPassword)) {
 			t.Log("passed Passwd Err test")

@@ -81,7 +81,7 @@ type Client struct {
 
 	Conn net.Conn
 	// Quick Datagram/Publish goes UDPs
-	QConn net.UDPConn
+	QConn *net.UDPConn
 	r     *bufio.Reader
 	// w    *bufio.Writer
 
@@ -254,7 +254,7 @@ func (client *Client) sendSrvInfo(call *Call) {
 	client.pending[seq] = call
 
 	req := protocol.NewMessage()
-	m.NewMessage(req)
+	m.NewMessage(req, client.QConn.LocalAddr().String())
 	req.SetSeqNo(seq)
 
 	tmp, err := req.Encode(protocol.ChannelNormal)
@@ -368,7 +368,12 @@ func (client *Client) sendSingle(call *Call) {
 
 	req := protocol.NewMessage()
 	req.SetMessageType(protocol.TypeDatagram)
-	req.SetSeqNo(0)
+	if call.IsQuick {
+		// This is Quick channel specific
+		req.SetSeqNo(client.uid)
+	} else {
+		req.SetSeqNo(0)
+	}
 
 	req.URL = []byte(call.URL)
 	req.Param = *call.Param
@@ -383,7 +388,11 @@ func (client *Client) sendSingle(call *Call) {
 	}
 	client.mutex.Unlock()
 
-	_, err = client.Conn.Write(tmp)
+	if call.IsQuick {
+		_, err = client.QConn.Write(tmp)
+	} else {
+		_, err = client.Conn.Write(tmp)
+	}
 
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {

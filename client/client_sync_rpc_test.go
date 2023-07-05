@@ -23,7 +23,7 @@ func TestRPC(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	_, err := c.Connect("tcp", *rpc_addr)
+	_, err := c.Connect("vsoa", *rpc_addr)
 	if err != nil {
 		t.Fatal(err)
 	}

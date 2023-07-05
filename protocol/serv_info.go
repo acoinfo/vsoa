@@ -12,6 +12,7 @@ package protocol
 import (
 	"encoding/binary"
 	"encoding/json"
+	"net"
 )
 
 type ServInfoReqParam struct {
@@ -34,10 +35,12 @@ const (
 	ServInfoResAsJSON
 )
 
-func (q ServInfoReqParam) NewMessage(req *Message) {
+func (q ServInfoReqParam) NewMessage(req *Message, laddr string) {
 	req.SetMessageType(TypeServInfo)
 	req.SetStatusType(StatusSuccess)
-	// TODO: Add real quick channel id to fill the Tunid
+	// Add real quick channel id to fill the Tunid
+	udpaddr, _ := net.ResolveUDPAddr("udp", laddr)
+	req.SetTunId(udpaddr.AddrPort().Port())
 	req.SetValidTunid()
 	req.SetReply(false)
 
