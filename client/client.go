@@ -51,7 +51,7 @@ const (
 
 type seqKey struct{}
 
-// RPCClient is interface that defines one client to call one server.
+// VsoaClient is interface that defines one client to call one server.
 type VsoaClient interface {
 	// connect & shack hand with VSOA server
 	Connect(network, address string) error
