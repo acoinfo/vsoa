@@ -39,6 +39,7 @@ var DefaultOption = Option{}
 // ErrShutdown connection is closed.
 var (
 	ErrShutdown         = errors.New("connection is shut down")
+	ErrUnAuthed         = errors.New("client is not Authed")
 	ErrUnsupportedCodec = errors.New("unsupported codec")
 )
 
@@ -65,9 +66,14 @@ type VsoaClient interface {
 	// Return Server URL/ip:port
 	RemoteAddr() string
 
+	// Subscribe server URL;
+	// inject onPublish callback to the URL with father URL
+	Subscribe(URL string, onPublish func(m *protocol.Message)) error
+
 	RegisterServerMessageChan(ch chan<- *protocol.Message)
 	UnregisterServerMessageChan()
 
+	IsAuthed() bool
 	IsClosing() bool
 	IsShutdown() bool
 
@@ -80,14 +86,18 @@ type Client struct {
 	uid    uint32
 
 	Conn net.Conn
+	r    *bufio.Reader
 	// Quick Datagram/Publish goes UDPs
 	QConn *net.UDPConn
-	r     *bufio.Reader
-	// w    *bufio.Writer
+	qr    *bufio.Reader
+
+	// used for server publish
+	SubscribeList map[string]func(m *protocol.Message)
 
 	mutex    sync.Mutex // protects following
 	seq      uint32
 	pending  map[uint32]*Call
+	authed   bool // if server authed this client
 	closing  bool // user has called Close
 	shutdown bool // server has told us to stop
 
@@ -98,6 +108,7 @@ type Client struct {
 func NewClient(option Option) *Client {
 	return &Client{
 		option: option,
+		authed: false,
 	}
 }
 
@@ -136,6 +147,13 @@ func (call *Call) done() {
 	default:
 		log.Println("rpc: discarding Call reply due to insufficient Done chan capacity")
 	}
+}
+
+// IsAuthed client is closing or not.
+func (client *Client) IsAuthed() bool {
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+	return client.authed
 }
 
 // IsClosing client is closing or not.
@@ -201,6 +219,10 @@ func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *pr
 		go client.sendRPC(call)
 	case protocol.TypeDatagram:
 		go client.sendSingle(call)
+	case protocol.TypeSubscribe:
+		go client.sendSubscribe(call, true)
+	case protocol.TypeUnsubscribe:
+		go client.sendSubscribe(call, false)
 	default:
 		return call // We just return done
 	}
@@ -355,7 +377,7 @@ func (client *Client) sendRPC(call *Call) {
 	}
 }
 
-// Client send Datagram(TCP) message
+// Client send Datagram(TCP/UDP) message
 func (client *Client) sendSingle(call *Call) {
 	// If it's Datagram call Set header's seq always be zero
 	client.mutex.Lock()
@@ -415,8 +437,6 @@ func (client *Client) sendSingle(call *Call) {
 	return
 }
 
-var count int = 0
-
 func (client *Client) input() {
 	var err error
 
@@ -426,6 +446,16 @@ func (client *Client) input() {
 		err = res.Decode(client.r)
 		if err != nil {
 			break
+		}
+
+		// This is for normal channel publish
+		if res.MessageType() == protocol.TypePublish {
+			// TODO: father URL logic
+			if act, ok := client.SubscribeList[string(res.URL)]; ok {
+				act(res)
+			} else {
+				continue
+			}
 		}
 
 		seq := res.SeqNo()
@@ -472,6 +502,8 @@ func (client *Client) input() {
 
 	client.mutex.Lock()
 	client.Conn.Close()
+	//We need to cloes quick channel too.
+	client.QConn.Close()
 	client.shutdown = true
 	closing := client.closing
 	if e, ok := err.(*net.OpError); ok {
@@ -517,7 +549,6 @@ func (client *Client) handleServerRequest(msg *protocol.Message) {
 			log.Panicf("ServerMessageChan may be full so the server request %d has been dropped", msg.SeqNo())
 		}
 	}
-
 }
 
 // Close calls the underlying connection's Close method. If the connection is already

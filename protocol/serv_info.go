@@ -12,7 +12,12 @@ package protocol
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"net"
+)
+
+var (
+	ErrMessagePasswd = errors.New(StatusText(StatusPassword))
 )
 
 type ServInfoReqParam struct {
@@ -49,7 +54,7 @@ func (q ServInfoReqParam) NewMessage(req *Message, laddr string) {
 	req.Data = nil
 }
 
-func (s ServInfoResParam) NewMessage(ResType int, res *Message, ClientUid uint32) {
+func (s ServInfoResParam) NewGoodMessage(ResType int, res *Message, ClientUid uint32) {
 	res.SetMessageType(TypeServInfo)
 	res.SetStatusType(StatusSuccess)
 	res.SetReply(true)
@@ -70,6 +75,12 @@ func (s ServInfoResParam) NewMessage(ResType int, res *Message, ClientUid uint32
 		res.Param = json.RawMessage(s.Info)
 		binary.BigEndian.PutUint32(res.Data, uint32(ClientUid))
 	}
+}
+
+func (s ServInfoResParam) NewErrMessage(res *Message) {
+	res.SetMessageType(TypeServInfo)
+	res.SetStatusType(StatusPassword)
+	res.SetReply(true)
 }
 
 func DecodeServInfo(m json.RawMessage) string {

@@ -98,7 +98,7 @@ func (h *Header) SetMessageType(mt MessageType) {
 	h[1] = byte(mt)
 }
 
-// IsPingEcho returns whether the message is RPC message.
+// IsRPC returns whether the message is RPC message.
 func (h Header) IsRPC() bool {
 	return h[1] == byte(TypeRPC)
 }
@@ -106,6 +106,21 @@ func (h Header) IsRPC() bool {
 // IsPingEcho returns whether the message is ping echo message.
 func (h Header) IsPingEcho() bool {
 	return h[1] == byte(TypePingEcho)
+}
+
+// IsServInfo returns whether the message is service info message.
+func (h Header) IsServInfo() bool {
+	return h[1] == byte(TypeServInfo)
+}
+
+func (h Header) IsOneway() bool {
+	switch h[1] {
+	case byte(TypeDatagram):
+		fallthrough
+	case byte(TypePublish):
+		return false
+	}
+	return true
 }
 
 // SetPingEcho sets the type flag to ping echo fast.

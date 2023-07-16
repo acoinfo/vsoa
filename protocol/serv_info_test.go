@@ -10,7 +10,7 @@ func TestRes(t *testing.T) {
 	}
 
 	res := NewMessage()
-	m.NewMessage(ServInfoResAsJSON, res, 0x10)
+	m.NewGoodMessage(ServInfoResAsJSON, res, 0x10)
 
 	if GetClientUid(res.Data) != 0x10 {
 		t.Fatalf("Client Uid should be 0x10, we got %x", GetClientUid(res.Data))

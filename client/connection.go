@@ -32,7 +32,8 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 		{
 			if err == nil && conn != nil {
 				client.QConn = qconn
-				// TODO: add Quick channel input thread since connected
+				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
+				go client.qinput()
 			}
 		}
 	}
@@ -45,8 +46,11 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 		return "", err
 	}
 
+	client.mutex.Lock()
+	client.authed = true
 	// this is used for Quick channel
 	client.uid = protocol.GetClientUid(reply.Data)
+	client.mutex.Unlock()
 	return protocol.DecodeServInfo(reply.Param), err
 }
 
