@@ -118,9 +118,9 @@ func (h Header) IsOneway() bool {
 	case byte(TypeDatagram):
 		fallthrough
 	case byte(TypePublish):
-		return false
+		return true
 	}
-	return true
+	return false
 }
 
 // SetPingEcho sets the type flag to ping echo fast.
@@ -186,6 +186,8 @@ func (h Header) padLen() byte {
 
 // Internel use to pad the massage and fill the pad length flag automatic
 func (h *Header) setPadLen(pl byte) {
+	// clear PadLen flag
+	h[2] = h[2] & 0x3f
 	h[2] = h[2] | ((pl) << 6 & 0xc0)
 }
 
@@ -233,6 +235,14 @@ func (m Message) Clone() *Message {
 	c.URL = m.URL
 	c.Param = m.Param
 	c.Data = m.Data
+	return c
+}
+
+// CloneHeader clones header from an message.
+func (m Message) CloneHeader() *Message {
+	header := *m.Header
+	c := NewMessage()
+	c.Header = &header
 	return c
 }
 

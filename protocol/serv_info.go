@@ -72,7 +72,7 @@ func (s ServInfoResParam) NewGoodMessage(ResType int, res *Message, ClientUid ui
 	case ServInfoResAsString:
 		fallthrough // it still be a string
 	default:
-		res.Param = json.RawMessage(s.Info)
+		res.Param = json.RawMessage("\"" + s.Info + "\"")
 		binary.BigEndian.PutUint32(res.Data, uint32(ClientUid))
 	}
 }

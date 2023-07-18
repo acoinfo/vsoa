@@ -572,5 +572,9 @@ func (client *Client) Close() error {
 
 	client.closing = true
 	client.mutex.Unlock()
+
+	client.QConn.Close()
+	err = client.Conn.Close()
+
 	return err
 }

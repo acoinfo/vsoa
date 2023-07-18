@@ -22,7 +22,6 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 		if err == nil && conn != nil {
 			client.Conn = conn
 			client.r = bufio.NewReaderSize(conn, ReaderBuffsize)
-			// c.w = bufio.NewWriterSize(conn, WriterBuffsize)
 
 			// start reading and writing since connected
 			go client.input()

@@ -3,11 +3,12 @@ package client
 import (
 	"flag"
 	"go-vsoa/protocol"
+	"go-vsoa/server"
 	"testing"
 )
 
 var (
-	addr = flag.String("addr", "localhost:3002", "server address")
+	addr = flag.String("addr", "localhost:3003", "server address")
 )
 
 func TestGoodConnect(t *testing.T) {
@@ -44,4 +45,25 @@ func TestWorngPasswdConnect(t *testing.T) {
 		}
 	}
 	defer c.Close()
+}
+
+func init() {
+	// Init golang server
+	serverOption := server.Option{
+		Password: "123456",
+	}
+	s := server.NewServer("golang VSOA server", serverOption)
+
+	// Register URL
+	h := func(req, res *protocol.Message) {
+		res.Param = req.Param
+		res.Data = req.Data
+	}
+	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
+
+	go func() {
+		_ = s.Serve("tcp", "127.0.0.1:3003")
+	}()
+	//defer s.Close()
+	// Done init golang server
 }
