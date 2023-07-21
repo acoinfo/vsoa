@@ -12,6 +12,7 @@ var (
 )
 
 func TestGoodConnect(t *testing.T) {
+	startServer()
 	flag.Parse()
 
 	clientOption := Option{
@@ -29,6 +30,7 @@ func TestGoodConnect(t *testing.T) {
 }
 
 func TestWorngPasswdConnect(t *testing.T) {
+	startServer()
 	flag.Parse()
 
 	clientOption := Option{
@@ -47,7 +49,7 @@ func TestWorngPasswdConnect(t *testing.T) {
 	defer c.Close()
 }
 
-func init() {
+func startServer() {
 	// Init golang server
 	serverOption := server.Option{
 		Password: "123456",

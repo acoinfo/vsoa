@@ -23,7 +23,7 @@ func TestDatagram(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	_, err := c.Connect("vsoa", *rpc_addr)
+	_, err := c.Connect("vsoa", *datagram_addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestDatagramQuick(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	_, err := c.Connect("vsoa", *rpc_addr)
+	_, err := c.Connect("vsoa", *datagram_addr)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"go-vsoa/protocol"
-	"go-vsoa/server"
 	"testing"
 )
 
@@ -17,10 +16,14 @@ type RpcAsyncTestParam struct {
 }
 
 func TestRPCAsync(t *testing.T) {
+	startServer()
 	flag.Parse()
 
 	clientOption := Option{
-		Password: "123456",
+		Password:     "123456",
+		PingInterval: 2,
+		PingTimeout:  10,
+		PingLost:     3,
 	}
 
 	c := NewClient(clientOption)
@@ -62,6 +65,7 @@ func TestRPCAsync(t *testing.T) {
 }
 
 func TestRPCMixed(t *testing.T) {
+	startServer()
 	flag.Parse()
 
 	clientOption := Option{
@@ -78,7 +82,6 @@ func TestRPCMixed(t *testing.T) {
 	reqSync := protocol.NewMessage()
 	req1 := protocol.NewMessage()
 	req2 := protocol.NewMessage()
-	reply := protocol.NewMessage()
 
 	biddata := &RpcAsyncTestParam{
 		// Larger than 256KB Message Test
@@ -91,7 +94,7 @@ func TestRPCMixed(t *testing.T) {
 	}
 	req2.Param, _ = json.Marshal(biddata)
 
-	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
+	reply, err := c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -164,25 +167,4 @@ func logAsyncCall(call *Call, t *testing.T) {
 	} else {
 		t.Fatal("error Date miss match")
 	}
-}
-
-func init() {
-	// Init golang server
-	serverOption := server.Option{
-		Password: "123456",
-	}
-	s := server.NewServer("golang VSOA server", serverOption)
-
-	// Register URL
-	h := func(req, res *protocol.Message) {
-		res.Param = req.Param
-		res.Data = req.Data
-	}
-	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
-
-	go func() {
-		_ = s.Serve("tcp", "127.0.0.1:3003")
-	}()
-	//defer s.Close()
-	// Done init golang server
 }

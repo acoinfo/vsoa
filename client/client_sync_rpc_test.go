@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"go-vsoa/protocol"
-	"go-vsoa/server"
 	"testing"
 )
 
@@ -17,6 +16,7 @@ type RpcTestParam struct {
 }
 
 func TestRPC(t *testing.T) {
+	startServer()
 	flag.Parse()
 
 	clientOption := Option{
@@ -31,9 +31,8 @@ func TestRPC(t *testing.T) {
 	defer c.Close()
 
 	req := protocol.NewMessage()
-	reply := protocol.NewMessage()
 
-	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req)
+	reply, err := c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
 			t.Log("Pass: Invalid URL")
@@ -45,7 +44,6 @@ func TestRPC(t *testing.T) {
 	}
 
 	req.Param, _ = json.RawMessage(`{"Test Num":123}`).MarshalJSON()
-
 	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
@@ -58,25 +56,4 @@ func TestRPC(t *testing.T) {
 		json.Unmarshal(reply.Param, DstParam)
 		t.Log("Seq:", reply.SeqNo(), "Param:", DstParam, "Unmarshaled data:", DstParam.Num)
 	}
-}
-
-func init() {
-	// Init golang server
-	serverOption := server.Option{
-		Password: "123456",
-	}
-	s := server.NewServer("golang VSOA server", serverOption)
-
-	// Register URL
-	h := func(req, res *protocol.Message) {
-		res.Param = req.Param
-		res.Data = req.Data
-	}
-	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
-
-	go func() {
-		_ = s.Serve("tcp", "127.0.0.1:3003")
-	}()
-	//defer s.Close()
-	// Done init golang server
 }
