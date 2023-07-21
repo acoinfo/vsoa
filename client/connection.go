@@ -11,9 +11,12 @@ import (
 
 // Connect connects the server via specified network.
 // ServInfo Shack hand is needed cause VSOA protocol
+// TODO: add position logic.
 func (client *Client) Connect(network, address string) (ServerInfo string, err error) {
 	var conn net.Conn
 	var qconn *net.UDPConn
+
+	client.addr = address
 
 	switch network {
 	default:
@@ -25,6 +28,8 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 
 			// start reading and writing since connected
 			go client.input()
+		} else {
+			return "", err
 		}
 
 		qconn, err = newQuickConn(client, address)
@@ -33,14 +38,15 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 				client.QConn = qconn
 				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
 				go client.qinput()
+			} else {
+				return "", err
 			}
 		}
 	}
 
 	req := protocol.NewMessage()
-	reply := protocol.NewMessage()
 
-	reply, err = client.Call("", protocol.TypeServInfo, protocol.RpcMethodGet, req)
+	reply, err := client.Call("", protocol.TypeServInfo, protocol.RpcMethodGet, req)
 	if err != nil {
 		return "", err
 	}
@@ -50,6 +56,11 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 	// this is used for Quick channel
 	client.uid = protocol.GetClientUid(reply.Data)
 	client.mutex.Unlock()
+
+	if client.option.PingInterval != 0 {
+		go client.pingLoop()
+	}
+
 	return protocol.DecodeServInfo(reply.Param), err
 }
 
@@ -63,7 +74,7 @@ func newQuickConn(c *Client, address string) (*net.UDPConn, error) {
 		return nil, err
 	}
 
-	saddr, err = net.ResolveUDPAddr("udp", address)
+	saddr, _ = net.ResolveUDPAddr("udp", address)
 
 	qconn, err = net.DialUDP("udp", nil, saddr)
 	if err != nil {
@@ -101,4 +112,61 @@ func newDirectConn(c *Client, address string) (net.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+// reConnect connects the server via specified network.
+// ServInfo Shack hand is needed cause VSOA protocol
+// TODO: add position logic.
+func (client *Client) reConnect(network string) (err error) {
+	var conn net.Conn
+	var qconn *net.UDPConn
+
+	client.Close()
+	client.clearClient()
+	// Kill input/qinput/pingloop go func before start a new client
+
+	switch network {
+	default:
+		conn, err = newDirectConn(client, client.addr)
+
+		if err == nil && conn != nil {
+			client.Conn = conn
+			client.r = bufio.NewReaderSize(conn, ReaderBuffsize)
+
+			// start reading and writing since connected
+			go client.input()
+		} else {
+			return err
+		}
+
+		qconn, err = newQuickConn(client, client.addr)
+		{
+			if err == nil && conn != nil {
+				client.QConn = qconn
+				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
+				go client.qinput()
+			} else {
+				return err
+			}
+		}
+	}
+
+	req := protocol.NewMessage()
+
+	reply, err := client.Call("", protocol.TypeServInfo, protocol.RpcMethodGet, req)
+	if err != nil {
+		return err
+	}
+
+	client.mutex.Lock()
+	client.authed = true
+	// this is used for Quick channel
+	client.uid = protocol.GetClientUid(reply.Data)
+	client.mutex.Unlock()
+
+	if client.option.PingInterval != 0 {
+		go client.pingLoop()
+	}
+
+	return err
 }

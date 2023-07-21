@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"go-vsoa/protocol"
-	"io"
 	"log"
 	"net"
 	"sync"
@@ -41,6 +40,7 @@ var (
 	ErrShutdown         = errors.New("connection is shut down")
 	ErrUnAuthed         = errors.New("client is not Authed")
 	ErrUnsupportedCodec = errors.New("unsupported codec")
+	ErrPingEcho         = errors.New("PingEcho set error")
 )
 
 const (
@@ -49,8 +49,6 @@ const (
 	// WriterBuffsize is used for bufio writer.
 	WriterBuffsize = 16 * 1024
 )
-
-type seqKey struct{}
 
 // VsoaClient is interface that defines one client to call one server.
 type VsoaClient interface {
@@ -82,6 +80,7 @@ type VsoaClient interface {
 
 // Client represents a VSOA client. (For NOW it's only RPC&ServInfo)
 type Client struct {
+	addr   string
 	option Option
 	uid    uint32
 
@@ -94,22 +93,36 @@ type Client struct {
 	// used for server publish
 	SubscribeList map[string]func(m *protocol.Message)
 
-	mutex    sync.Mutex // protects following
-	seq      uint32
-	pending  map[uint32]*Call
-	authed   bool // if server authed this client
-	closing  bool // user has called Close
-	shutdown bool // server has told us to stop
+	mutex            sync.Mutex // protects following
+	seq              uint32
+	pending          map[uint32]*Call
+	authed           bool // if server authed this client
+	closing          bool // user has called Close
+	shutdown         bool // server has told us to stop
+	pingTimeoutCount uint // for server ping echo logic
 
 	ServerMessageChan chan<- *protocol.Message
 }
 
 // NewClient returns a new Client with the option.
 func NewClient(option Option) *Client {
-	return &Client{
-		option: option,
-		authed: false,
+	if option.ConnectTimeout == 0 {
+		option.ConnectTimeout = 5 * time.Second
 	}
+	return &Client{
+		option:           option,
+		authed:           false,
+		pingTimeoutCount: 0,
+	}
+}
+
+func (c *Client) clearClient() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.authed = false
+	c.closing = false
+	c.shutdown = false
+	c.pingTimeoutCount = 0
 }
 
 func (c *Client) GetUid() uint32 {
@@ -121,7 +134,7 @@ type Option struct {
 	Password       string
 	PingInterval   int
 	PingTimeout    int
-	PingLost       int
+	PingLost       uint
 	ConnectTimeout time.Duration
 	// TLSConfig for tcp and quic
 	TLSConfig *tls.Config
@@ -181,15 +194,15 @@ func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *pr
 	call.IsQuick = false
 	call.ServiceMethod = protocol.RpcMethodGet
 
-	switch flags.(type) {
+	switch t := flags.(type) {
 	case protocol.RpcMessageType:
 		if mt == protocol.TypeRPC {
-			call.ServiceMethod = flags.(protocol.RpcMessageType)
+			call.ServiceMethod = t
 		}
 	case protocol.QuickChannelFlag:
 		if mt == protocol.TypeDatagram || mt == protocol.TypePublish {
 			// This is used for UDP Quick chennels
-			call.IsQuick = flags.(protocol.QuickChannelFlag)
+			call.IsQuick = t
 		}
 	default:
 		// Do nothing
@@ -223,6 +236,8 @@ func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *pr
 		go client.sendSubscribe(call, true)
 	case protocol.TypeUnsubscribe:
 		go client.sendSubscribe(call, false)
+	case protocol.TypePingEcho:
+		go client.sendPingEcho(call)
 	default:
 		return call // We just return done
 	}
@@ -240,16 +255,16 @@ func (client *Client) call(URL string, mt protocol.MessageType, flags any, req *
 
 	Done := client.Go(URL, mt, flags, req, reply, make(chan *Call, 1)).Done
 	var err error
-	select {
-	case call := <-Done:
-		err = call.Error
-		reply = call.Reply
-	}
+
+	call := <-Done
+	err = call.Error
+	reply = call.Reply
+
 	return reply, err
 }
 
 // Client send SrvInfo message
-// Internal use for
+// Internal use for handshake with server.
 func (client *Client) sendSrvInfo(call *Call) {
 	// Register this call.
 	client.mutex.Lock()
@@ -267,8 +282,8 @@ func (client *Client) sendSrvInfo(call *Call) {
 	m := &protocol.ServInfoReqParam{
 		Password:     client.option.Password,
 		PingInterval: client.option.PingInterval,
-		PingTimeout:  client.option.PingInterval,
-		PingLost:     client.option.PingInterval,
+		PingTimeout:  client.option.PingTimeout,
+		PingLost:     client.option.PingLost,
 	}
 
 	seq := client.seq
@@ -276,7 +291,12 @@ func (client *Client) sendSrvInfo(call *Call) {
 	client.pending[seq] = call
 
 	req := protocol.NewMessage()
-	m.NewMessage(req, client.QConn.LocalAddr().String())
+	if client.QConn == nil {
+		// It should not be here
+		m.NewMessage(req, "127.0.0.1:60000")
+	} else {
+		m.NewMessage(req, client.QConn.LocalAddr().String())
+	}
 	req.SetSeqNo(seq)
 
 	tmp, err := req.Encode(protocol.ChannelNormal)
@@ -312,7 +332,6 @@ func (client *Client) sendSrvInfo(call *Call) {
 		return
 	}
 	// We don't done the Call, util we get Server Input
-	return
 }
 
 // Client send RPC message
@@ -434,103 +453,6 @@ func (client *Client) sendSingle(call *Call) {
 
 	// Datagram don't have respond
 	call.done()
-	return
-}
-
-func (client *Client) input() {
-	var err error
-
-	for err == nil {
-		res := protocol.NewMessage()
-
-		err = res.Decode(client.r)
-		if err != nil {
-			break
-		}
-
-		// This is for normal channel publish
-		if res.MessageType() == protocol.TypePublish {
-			// TODO: father URL logic
-			if act, ok := client.SubscribeList[string(res.URL)]; ok {
-				act(res)
-			} else {
-				continue
-			}
-		}
-
-		seq := res.SeqNo()
-		var call *Call
-		isServerMessage := (res.IsReply() == false)
-		if !isServerMessage {
-			client.mutex.Lock()
-			call = client.pending[seq]
-			delete(client.pending, seq)
-			client.mutex.Unlock()
-		}
-
-		switch {
-		case call == nil:
-			if isServerMessage {
-				if client.ServerMessageChan != nil {
-					client.handleServerRequest(res)
-				}
-				continue
-			}
-		case res.StatusType() != protocol.StatusSuccess:
-			// We've got an error response. Give this to the request
-			call.Error = strErr(res.StatusTypeText())
-			call.Reply = res
-			call.done()
-		case res.StatusType() == protocol.StatusPassword:
-			// We've got Passwd error response. Shutdown client
-			call.Error = strErr(res.StatusTypeText())
-			break
-		default:
-			call.Reply = res
-			call.done()
-		}
-	}
-
-	// Terminate pending calls.
-	// This is used for Subscribe in VSOA
-	if client.ServerMessageChan != nil {
-		req := protocol.NewMessage()
-		req.SetMessageType(protocol.TypePublish)
-		req.SetStatusType(protocol.StatusNoResponding)
-		client.handleServerRequest(req)
-	}
-
-	client.mutex.Lock()
-	client.Conn.Close()
-	//We need to cloes quick channel too.
-	client.QConn.Close()
-	client.shutdown = true
-	closing := client.closing
-	if e, ok := err.(*net.OpError); ok {
-		if e.Addr != nil || e.Err != nil {
-			err = fmt.Errorf("net.OpError: %s", e.Err.Error())
-		} else {
-			err = errors.New("net.OpError")
-		}
-
-	}
-	if err == io.EOF {
-		if closing {
-			err = ErrShutdown
-		} else {
-			err = io.ErrUnexpectedEOF
-		}
-	}
-	for _, call := range client.pending {
-		call.Error = err
-		call.done()
-	}
-
-	client.mutex.Unlock()
-
-	if err != nil && !closing {
-		log.Printf("VSOA: client protocol error: %v", err)
-	}
 }
 
 func (client *Client) handleServerRequest(msg *protocol.Message) {

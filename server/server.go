@@ -27,7 +27,7 @@ const (
 	// WriterBuffsize is used for bufio writer.
 	WriterBuffsize = 1024
 
-	DefaultTimeout = 500 * time.Millisecond
+	DefaultTimeout = 5 * time.Minute
 )
 
 // VSOA Server need to konw the client infos
@@ -65,8 +65,8 @@ type VsoaServer struct {
 	doneChan     chan struct{}
 
 	inShutdown int32
-	onShutdown []func(s *VsoaServer)
-	onRestart  []func(s *VsoaServer)
+	// onShutdown []func(s *VsoaServer)
+	// onRestart  []func(s *VsoaServer)
 
 	// TLSConfig for creating tls tcp connection.
 	tlsConfig *tls.Config
@@ -84,8 +84,9 @@ type VsoaServer struct {
 // NewServer returns a server.
 func NewServer(name string, so Option) *VsoaServer {
 	s := &VsoaServer{
-		Name:          name,
-		option:        so,
+		Name:   name,
+		option: so,
+		// this can cause server close connection
 		readTimeout:   DefaultTimeout,
 		writeTimeout:  DefaultTimeout,
 		quickChannel:  make(map[*net.UDPAddr]uint32),
@@ -128,7 +129,7 @@ func (s *VsoaServer) serveListener(ln net.Listener) error {
 				return ErrServerClosed
 			}
 
-			if ne, ok := e.(net.Error); ok && ne.Temporary() {
+			if ne, ok := e.(net.Error); ok && ne.Timeout() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
 				} else {
@@ -145,8 +146,9 @@ func (s *VsoaServer) serveListener(ln net.Listener) error {
 			return e
 		}
 		tempDelay = 0
-		if _, ok := conn.(*net.TCPConn); ok {
-		}
+		// if _, ok := conn.(*net.TCPConn); ok {
+		// 	// Quick channel?
+		// }
 
 		CUid := s.clientsCount.Add(1)
 
@@ -164,6 +166,28 @@ func (s *VsoaServer) serveListener(ln net.Listener) error {
 
 		go s.serveConn(conn, CUid)
 	}
+}
+
+func (s *VsoaServer) sendMessage(req *protocol.Message, conn net.Conn) error {
+	req.SetMessageType(protocol.TypePublish)
+
+	//	req.SeqNo(seq)
+	req.SetReply(false)
+
+	tmp, err := req.Encode(protocol.ChannelNormal)
+	if err != nil {
+		log.Panicln(err)
+		return err
+	}
+
+	if s.writeTimeout != 0 {
+		conn.SetWriteDeadline(time.Now().Add(s.writeTimeout))
+	}
+
+	_, err = conn.Write(tmp)
+	protocol.PutData(&tmp)
+
+	return err
 }
 
 func (s *VsoaServer) sendResponse(res *protocol.Message, conn net.Conn) {
@@ -197,6 +221,7 @@ func (s *VsoaServer) serveConn(conn net.Conn, ClientUid uint32) {
 				ss = size
 			}
 			buf = buf[:ss]
+			log.Printf("serving %s panic error: %s, stack:\n %s", conn.RemoteAddr(), err, buf)
 		}
 
 		// make sure all inflight requests are handled and all drained
@@ -229,12 +254,14 @@ func (s *VsoaServer) serveConn(conn net.Conn, ClientUid uint32) {
 		}
 
 		t0 := time.Now()
+		// If client send nothing during readTimeout to server, server will kill the connection!
 		if s.readTimeout != 0 {
 			conn.SetReadDeadline(t0.Add(s.readTimeout))
 		}
 
 		// read a request from the underlying connection
 		req := protocol.NewMessage()
+		// If client send nothing during readTimeout to server, can cause error
 		err := req.Decode(r)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -248,7 +275,7 @@ func (s *VsoaServer) serveConn(conn net.Conn, ClientUid uint32) {
 		}
 
 		if !req.IsPingEcho() && !req.IsServInfo() {
-			if s.activeClients[ClientUid].Authed == false {
+			if !s.activeClients[ClientUid].Authed {
 				// Close unauthed client
 				log.Printf("auth failed for conn %s: %v", conn.RemoteAddr().String(), protocol.StatusText(protocol.StatusPassword))
 				return
@@ -272,18 +299,17 @@ func (s *VsoaServer) processOneRequest(req *protocol.Message, conn net.Conn, Cli
 	atomic.AddInt32(&s.handlerMsgNum, 1)
 	defer atomic.AddInt32(&s.handlerMsgNum, -1)
 
-	res := protocol.NewMessage()
+	res := req.CloneHeader()
 
 	if req.IsServInfo() {
 		err := s.servInfoHandler(req, res, ClientUid)
 		if err != nil {
-			log.Printf("Failed to Auth Client: %d", ClientUid)
+			log.Printf("Failed to Auth Client: %d, err: %s", ClientUid, err)
 		}
 		s.sendResponse(res, conn)
 		return
 	}
 
-	res = req.CloneHeader()
 	res.SetReply(true)
 
 	if req.IsPingEcho() {
@@ -293,7 +319,9 @@ func (s *VsoaServer) processOneRequest(req *protocol.Message, conn net.Conn, Cli
 
 	if !req.IsOneway() {
 		// TODO: father URL logic
-		if handle, ok := s.routeMap[string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
+		if handle, ok := s.routeMap["RPC."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
+			handle(req, res)
+		} else if handle, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
 			handle(req, res)
 		} else {
 			res.SetStatusType(protocol.StatusInvalidUrl)
@@ -301,7 +329,11 @@ func (s *VsoaServer) processOneRequest(req *protocol.Message, conn net.Conn, Cli
 
 		s.sendResponse(res, conn)
 	} else {
-		// TODO: internal handle
+		if handle, ok := s.routeMap["DATAGRAME."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
+			handle(req, res)
+		} else {
+			res.SetStatusType(protocol.StatusInvalidUrl)
+		}
 	}
 }
 
@@ -358,7 +390,28 @@ func (s *VsoaServer) servInfoHandler(req *protocol.Message, resp *protocol.Messa
 func (s *VsoaServer) AddRpcHandler(servicePath string, serviceMethod protocol.RpcMessageType, handler func(*protocol.Message, *protocol.Message)) {
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	s.routeMap[servicePath+"."+protocol.RpcMethodText(serviceMethod)] = handler
+	s.routeMap["RPC."+servicePath+"."+protocol.RpcMethodText(serviceMethod)] = handler
+}
+
+func (s *VsoaServer) AddOneWayHandler(servicePath string, handler func(*protocol.Message, *protocol.Message)) {
+	s.routerMapMu.Lock()
+	defer s.routerMapMu.Unlock()
+	s.routeMap["DATAGRAME."+servicePath] = handler
+}
+
+// This is used for Subs calls
+// TODO: add publisher
+func (s *VsoaServer) AddPublisher(servicePath string) {
+	s.routerMapMu.Lock()
+	defer s.routerMapMu.Unlock()
+	s.routeMap["SUBS/UNSUBS."+servicePath] = subHandler
+}
+
+func subHandler(req, res *protocol.Message) {
+	res.SetStatusType(protocol.StatusSuccess)
+	// Subs/UnSubs logic
+
+	// TODO: add publisher
 }
 
 func (s *VsoaServer) isShutdown() bool {
