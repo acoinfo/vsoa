@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	publish_server_addr = flag.String("publish_server_addr", "localhost:3002", "server address")
+	publish_server_addr = flag.String("publish_server_addr", "localhost:3003", "server address")
 )
 
 type PublishTestParam struct {
@@ -21,6 +21,8 @@ type callback struct {
 }
 
 func TestSub(t *testing.T) {
+	startServer()
+
 	cb := new(callback)
 	cb.T = t
 
@@ -38,7 +40,14 @@ func TestSub(t *testing.T) {
 	defer c.Close()
 
 	// client don't know if it's quick channel or not
-	c.Subscribe("/p", cb.getPublishParam)
+	err = c.Subscribe("/p", cb.getPublishParam)
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	}
 
 	time.Sleep(5 * time.Second)
 

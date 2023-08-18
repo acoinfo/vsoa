@@ -5,6 +5,7 @@ import (
 	"go-vsoa/protocol"
 	"go-vsoa/server"
 	"testing"
+	"time"
 )
 
 var (
@@ -63,8 +64,10 @@ func startServer() {
 	}
 	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
 
+	s.AddPublisher("/p", time.Second*10)
+
 	go func() {
-		_ = s.Serve("tcp", "127.0.0.1:3003")
+		_ = s.Serve("127.0.0.1:3003")
 	}()
 	//defer s.Close()
 	// Done init golang server

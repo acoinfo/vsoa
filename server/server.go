@@ -17,8 +17,9 @@ import (
 
 // ErrServerClosed is returned by the Server's Serve, ListenAndServe after a call to Shutdown or Close.
 var (
-	ErrServerClosed  = errors.New("http: Server closed")
-	ErrReqReachLimit = errors.New("request reached rate limit")
+	ErrServerClosed      = errors.New("VSOA: Server closed")
+	ErrReqReachLimit     = errors.New("request reached rate limit")
+	ErrAlreadyRegistered = errors.New("URL has been Registered")
 )
 
 const (
@@ -60,7 +61,7 @@ type VsoaServer struct {
 	mu            sync.RWMutex
 	activeClients map[uint32]*client
 	// When QuickChannel get RemoteAddr we need to use it to check if we have the activeClient
-	quickChannel map[*net.UDPAddr]uint32
+	quickChannel map[string]uint32
 	clientsCount atomic.Uint32
 	doneChan     chan struct{}
 
@@ -89,7 +90,7 @@ func NewServer(name string, so Option) *VsoaServer {
 		// this can cause server close connection
 		readTimeout:   DefaultTimeout,
 		writeTimeout:  DefaultTimeout,
-		quickChannel:  make(map[*net.UDPAddr]uint32),
+		quickChannel:  make(map[string]uint32),
 		activeClients: make(map[uint32]*client),
 		doneChan:      make(chan struct{}),
 		routeMap:      make(map[string]Handler),
@@ -101,12 +102,15 @@ func NewServer(name string, so Option) *VsoaServer {
 // Serve starts and listens VSOA normal channel requests.
 // TODO: we need to start listen Quick channel too!
 // It is blocked until receiving connections from clients.
-func (s *VsoaServer) Serve(network, address string) (err error) {
+func (s *VsoaServer) Serve(address string) (err error) {
 	var ln net.Listener
-	ln, err = s.makeListener(network, address)
+	ln, err = s.makeListener("tcp", address)
 	if err != nil {
 		return err
 	}
+
+	// Go quick channel listener
+	go s.serveQuickListener(address)
 
 	return s.serveListener(ln)
 }
@@ -146,9 +150,6 @@ func (s *VsoaServer) serveListener(ln net.Listener) error {
 			return e
 		}
 		tempDelay = 0
-		// if _, ok := conn.(*net.TCPConn); ok {
-		// 	// Quick channel?
-		// }
 
 		CUid := s.clientsCount.Add(1)
 
@@ -166,28 +167,6 @@ func (s *VsoaServer) serveListener(ln net.Listener) error {
 
 		go s.serveConn(conn, CUid)
 	}
-}
-
-func (s *VsoaServer) sendMessage(req *protocol.Message, conn net.Conn) error {
-	req.SetMessageType(protocol.TypePublish)
-
-	//	req.SeqNo(seq)
-	req.SetReply(false)
-
-	tmp, err := req.Encode(protocol.ChannelNormal)
-	if err != nil {
-		log.Panicln(err)
-		return err
-	}
-
-	if s.writeTimeout != 0 {
-		conn.SetWriteDeadline(time.Now().Add(s.writeTimeout))
-	}
-
-	_, err = conn.Write(tmp)
-	protocol.PutData(&tmp)
-
-	return err
 }
 
 func (s *VsoaServer) sendResponse(res *protocol.Message, conn net.Conn) {
@@ -321,18 +300,20 @@ func (s *VsoaServer) processOneRequest(req *protocol.Message, conn net.Conn, Cli
 		// TODO: father URL logic
 		if handle, ok := s.routeMap["RPC."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
 			handle(req, res)
-		} else if handle, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
-			handle(req, res)
+		} else if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)]; ok {
+			// TODO: clientUid Subs/UnSbus Logic
+			s.subs(req, ClientUid)
+			res.SetStatusType(protocol.StatusSuccess)
 		} else {
 			res.SetStatusType(protocol.StatusInvalidUrl)
 		}
 
 		s.sendResponse(res, conn)
 	} else {
-		if handle, ok := s.routeMap["DATAGRAME."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
+		if handle, ok := s.routeMap["DATAGRAME."+string(req.URL)]; ok {
 			handle(req, res)
-		} else {
-			res.SetStatusType(protocol.StatusInvalidUrl)
+		} else if handle, ok := s.routeMap["DATAGRAME.DEFAULT"]; ok {
+			handle(req, res)
 		}
 	}
 }
@@ -351,9 +332,11 @@ func (s *VsoaServer) servInfoHandler(req *protocol.Message, resp *protocol.Messa
 		if req.TunID() != 0 {
 			qAddr := (*net.UDPAddr)(s.activeClients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
 			qAddr.Port = int(req.TunID())
+			qString := qAddr.String()
 			s.activeClients[ClientUid].QAddr = (qAddr)
-			s.quickChannel[(qAddr)] = ClientUid
+			s.quickChannel[(qString)] = ClientUid
 		}
+		s.activeClients[ClientUid].Subscribes = make(map[string]bool)
 		s.mu.Unlock()
 		r.NewGoodMessage(protocol.ServInfoResAsString, resp, ClientUid)
 	} else {
@@ -373,9 +356,11 @@ func (s *VsoaServer) servInfoHandler(req *protocol.Message, resp *protocol.Messa
 				if req.TunID() != 0 {
 					qAddr := (*net.UDPAddr)(s.activeClients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
 					qAddr.Port = int(req.TunID())
+					qString := qAddr.String()
 					s.activeClients[ClientUid].QAddr = (qAddr)
-					s.quickChannel[(qAddr)] = ClientUid
+					s.quickChannel[(qString)] = ClientUid
 				}
+				s.activeClients[ClientUid].Subscribes = make(map[string]bool)
 				s.mu.Unlock()
 				r.NewGoodMessage(protocol.ServInfoResAsString, resp, ClientUid)
 			}
@@ -387,31 +372,58 @@ func (s *VsoaServer) servInfoHandler(req *protocol.Message, resp *protocol.Messa
 }
 
 // TODO: add both GET&SET with same handler!
-func (s *VsoaServer) AddRpcHandler(servicePath string, serviceMethod protocol.RpcMessageType, handler func(*protocol.Message, *protocol.Message)) {
+func (s *VsoaServer) AddRpcHandler(servicePath string, serviceMethod protocol.RpcMessageType, handler func(*protocol.Message, *protocol.Message)) (err error) {
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	s.routeMap["RPC."+servicePath+"."+protocol.RpcMethodText(serviceMethod)] = handler
+	if _, ok := s.routeMap["RPC."+servicePath+"."+protocol.RpcMethodText(serviceMethod)]; !ok {
+		s.routeMap["RPC."+servicePath+"."+protocol.RpcMethodText(serviceMethod)] = handler
+	} else {
+		return ErrAlreadyRegistered
+	}
+	return nil
 }
 
-func (s *VsoaServer) AddOneWayHandler(servicePath string, handler func(*protocol.Message, *protocol.Message)) {
+func (s *VsoaServer) AddOneWayHandler(servicePath string, handler func(*protocol.Message, *protocol.Message)) (err error) {
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	s.routeMap["DATAGRAME."+servicePath] = handler
+	if _, ok := s.routeMap["DATAGRAME."+servicePath]; !ok {
+		s.routeMap["DATAGRAME."+servicePath] = handler
+	} else {
+		return ErrAlreadyRegistered
+	}
+	return nil
+}
+
+func (s *VsoaServer) AddDefaultOndataHandler(handler func(*protocol.Message, *protocol.Message)) {
+	s.routerMapMu.Lock()
+	defer s.routerMapMu.Unlock()
+	s.routeMap["DATAGRAME.DEFAULT"] = handler
 }
 
 // This is used for Subs calls
 // TODO: add publisher
-func (s *VsoaServer) AddPublisher(servicePath string) {
+func (s *VsoaServer) AddPublisher(servicePath string, timeDriction time.Duration) (err error) {
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	s.routeMap["SUBS/UNSUBS."+servicePath] = subHandler
+
+	if _, ok := s.routeMap["SUBS/UNSUBS."+servicePath]; !ok {
+		s.routeMap["SUBS/UNSUBS."+servicePath] = nil
+		// TODO: go this Publisher Loop, Maybe it's quick channel
+	} else {
+		return ErrAlreadyRegistered
+	}
+	return nil
 }
 
-func subHandler(req, res *protocol.Message) {
-	res.SetStatusType(protocol.StatusSuccess)
-	// Subs/UnSubs logic
+func (s *VsoaServer) subs(req *protocol.Message, ClientUid uint32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if req.IsSubscribe() {
 
-	// TODO: add publisher
+		s.activeClients[ClientUid].Subscribes[string(req.URL)] = true
+	} else {
+		s.activeClients[ClientUid].Subscribes[string(req.URL)] = false
+	}
 }
 
 func (s *VsoaServer) isShutdown() bool {
@@ -425,7 +437,11 @@ func (s *VsoaServer) closeConn(ClientUid uint32) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.quickChannel, s.activeClients[ClientUid].QAddr)
+	// Clear Client Subscribes map
+	for k := range s.activeClients[ClientUid].Subscribes {
+		delete(s.activeClients[ClientUid].Subscribes, k)
+	}
+	delete(s.quickChannel, s.activeClients[ClientUid].QAddr.String())
 	delete(s.activeClients, ClientUid)
 }
 

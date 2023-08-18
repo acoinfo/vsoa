@@ -113,6 +113,16 @@ func (h Header) IsServInfo() bool {
 	return h[1] == byte(TypeServInfo)
 }
 
+// IsSubscribe returns whether the message is subscribe message.
+func (h Header) IsSubscribe() bool {
+	return h[1] == byte(TypeSubscribe)
+}
+
+// IsUnSubscribe returns whether the message is unsubscribe info message.
+func (h Header) IsUnSubscribe() bool {
+	return h[1] == byte(TypeUnsubscribe)
+}
+
 func (h Header) IsOneway() bool {
 	switch h[1] {
 	case byte(TypeDatagram):

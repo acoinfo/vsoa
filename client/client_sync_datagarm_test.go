@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"go-vsoa/protocol"
+	"go-vsoa/server"
 	"testing"
+	"time"
 )
 
 var (
-	datagram_addr = flag.String("datagram_addr", "localhost:3002", "server address")
+	datagram_addr = flag.String("datagram_addr", "localhost:3003", "server address")
 )
 
 type DatagramTestParam struct {
@@ -16,6 +18,7 @@ type DatagramTestParam struct {
 }
 
 func TestDatagram(t *testing.T) {
+	startDatagramServer(t)
 	flag.Parse()
 
 	clientOption := Option{
@@ -39,9 +42,13 @@ func TestDatagram(t *testing.T) {
 	} else {
 		t.Log("Datagram send done")
 	}
+
+	// don't close too quick before server handle the Call
+	time.Sleep(5 * time.Millisecond)
 }
 
 func TestDatagramQuick(t *testing.T) {
+	startDatagramServer(t)
 	flag.Parse()
 
 	clientOption := Option{
@@ -65,4 +72,38 @@ func TestDatagramQuick(t *testing.T) {
 	} else {
 		t.Log("Datagram send done")
 	}
+
+	// don't close too quick before server handle the Call
+	time.Sleep(5 * time.Millisecond)
+}
+
+func startDatagramServer(t *testing.T) {
+	// Init golang server
+	serverOption := server.Option{
+		Password: "123456",
+	}
+	s := server.NewServer("golang VSOA server", serverOption)
+
+	// Register URL
+	h := func(req, res *protocol.Message) {
+		res.Param = req.Param
+		t.Log("/datagram Handler:", "URL", string(req.URL), "Param:", string(res.Param))
+	}
+	s.AddOneWayHandler("/datagram", h)
+	qh := func(req, res *protocol.Message) {
+		res.Param = req.Param
+		t.Log("/datagramQuick Handler:", "URL", string(req.URL), "Param:", string(res.Param))
+	}
+	s.AddOneWayHandler("/datagramQuick", qh)
+	dh := func(req, res *protocol.Message) {
+		res.Param = req.Param
+		t.Log("Default Handler:", "URL", string(req.URL), "Param:", string(res.Param))
+	}
+	s.AddDefaultOndataHandler(dh)
+
+	go func() {
+		_ = s.Serve("127.0.0.1:3003")
+	}()
+	//defer s.Close()
+	// Done init golang server
 }
