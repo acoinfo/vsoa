@@ -7,8 +7,21 @@ import (
 	"time"
 )
 
-func (s *VsoaServer) publisher() {
+func (s *VsoaServer) publisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
+	req := protocol.NewMessage()
+	pubs(req, nil)
 
+	ticker := time.NewTicker(timeDriction)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		for _, client := range s.activeClients {
+			if client.Subscribes[servicePath] {
+				req.URL = []byte(servicePath)
+				s.sendMessage(req, client.Conn)
+			}
+		}
+	}
 }
 
 // Normal channel Publish Message

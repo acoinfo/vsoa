@@ -301,7 +301,6 @@ func (s *VsoaServer) processOneRequest(req *protocol.Message, conn net.Conn, Cli
 		if handle, ok := s.routeMap["RPC."+string(req.URL)+"."+req.MessageRpcMethodText()]; ok {
 			handle(req, res)
 		} else if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)]; ok {
-			// TODO: clientUid Subs/UnSbus Logic
 			s.subs(req, ClientUid)
 			res.SetStatusType(protocol.StatusSuccess)
 		} else {
@@ -401,14 +400,15 @@ func (s *VsoaServer) AddDefaultOndataHandler(handler func(*protocol.Message, *pr
 }
 
 // This is used for Subs calls
-// TODO: add publisher
-func (s *VsoaServer) AddPublisher(servicePath string, timeDriction time.Duration) (err error) {
+func (s *VsoaServer) AddPublisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) (err error) {
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
 
 	if _, ok := s.routeMap["SUBS/UNSUBS."+servicePath]; !ok {
-		s.routeMap["SUBS/UNSUBS."+servicePath] = nil
-		// TODO: go this Publisher Loop, Maybe it's quick channel
+		// No need to have handler save in the routeMap
+		s.routeMap["SUBS/UNSUBS."+servicePath] = pubs
+		// Maybe it's bad to run a Publisher for each pub
+		go s.publisher(servicePath, timeDriction, pubs)
 	} else {
 		return ErrAlreadyRegistered
 	}
@@ -419,7 +419,6 @@ func (s *VsoaServer) subs(req *protocol.Message, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.IsSubscribe() {
-
 		s.activeClients[ClientUid].Subscribes[string(req.URL)] = true
 	} else {
 		s.activeClients[ClientUid].Subscribes[string(req.URL)] = false

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"flag"
 	"go-vsoa/protocol"
 	"go-vsoa/server"
@@ -64,7 +65,10 @@ func startServer() {
 	}
 	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
 
-	s.AddPublisher("/p", time.Second*10)
+	pubs := func(req, _ *protocol.Message) {
+		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing"}`).MarshalJSON()
+	}
+	s.AddPublisher("/p", 1*time.Second, pubs)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")
