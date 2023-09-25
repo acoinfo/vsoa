@@ -99,9 +99,11 @@ func (h Header) MessageTypeText() string {
 	return TypeText(h.MessageType())
 }
 
+func smt(h *Header, mt MessageType)
+
 // SetMessageType sets message type.
 func (h *Header) SetMessageType(mt MessageType) {
-	h[1] = byte(mt)
+	smt(h, mt)
 }
 
 // IsRPC returns whether the message is RPC message.

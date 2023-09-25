@@ -23,6 +23,7 @@ TEXT    ·msgt(SB), NOSPLIT, $0
   RET
 
 TEXT    ·smt(SB), NOSPLIT, $0
-  MOVB     msgt+1(FP), AX
-  MOVB     AX, ret+16(FP)  
+  MOVQ     smt+0(FP), BX
+  MOVB     mt+8(FP), AX
+  MOVB     AX, 1(BX)
   RET
