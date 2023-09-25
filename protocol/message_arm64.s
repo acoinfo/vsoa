@@ -23,11 +23,6 @@ TEXT    ·msgt(SB), NOSPLIT, $0
   MOVB     R1, ret+16(FP)  
   RET
 
-// // SetMessageType sets message type.
-// func (h *Header) SetMessageType(mt MessageType) {
-// 	h[1] = byte(mt)
-// }
-
 TEXT    ·smt(SB), NOSPLIT, $0
   MOVB     msgt+1(FP), R1
   MOVB     R1, ret+16(FP)  
