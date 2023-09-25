@@ -142,8 +142,11 @@ func (h Header) IsOneway() bool {
 }
 
 // SetPingEcho sets the type flag to ping echo fast.
+func spe(h *Header)
+
+// SetPingEcho sets the type flag to ping echo fast.
 func (h *Header) SetPingEcho() {
-	h[1] = byte(TypePingEcho)
+	spe(h)
 }
 
 // IsReply returns whether the message is reply message.

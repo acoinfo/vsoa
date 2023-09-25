@@ -27,3 +27,9 @@ TEXT    ·smt(SB), NOSPLIT, $0
   MOVB     mt+8(FP), AX
   MOVB     AX, 1(BX)
   RET
+
+TEXT    ·spe(SB), NOSPLIT, $0
+  MOVQ     smt+0(FP), BX
+  MOVB     $0xff, AX
+  MOVB     AX, 1(BX)
+  RET
