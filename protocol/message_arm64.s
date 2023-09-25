@@ -31,6 +31,6 @@ TEXT    ·smt(SB), NOSPLIT, $0
 
 TEXT    ·spe(SB), NOSPLIT, $0
   MOVD     smt+0(FP), R0
-  MOVB     $0xff, R1
+  MOVW     $0xff, R1
   MOVB     R1, 1(R0)
   RET
