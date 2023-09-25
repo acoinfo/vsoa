@@ -75,17 +75,23 @@ func NewMessage() *Message {
 // Format:
 type Header [HdrLength]byte
 
-func (h Header) CheckMagicNumber() bool {
-	return h[0] == magicNumber
+func cmn(h Header) (ret bool)
+
+func (h Header) checkMagicNumber() bool {
+	return cmn(h)
 }
 
+func vs(h Header) (ret byte)
+
 func (h Header) Version() byte {
-	return h[0] >> 4
+	return vs(h)
 }
+
+func msgt(h Header) (ret byte)
 
 // MessageType returns the message type.
 func (h Header) MessageType() MessageType {
-	return MessageType(h[1])
+	return MessageType(msgt(h))
 }
 
 // MessageType returns the message type in text.
@@ -280,7 +286,7 @@ func (m Message) encodeSlicePointer(q QuickChannelFlag) (*[]byte, error) {
 	}
 
 	// We need to check Message len by type before send it,
-	if q == false {
+	if !q {
 		if totalL > MaxMessageLength {
 			return bufferPool.Get(1), ErrMessageTooLong
 		}
@@ -396,7 +402,7 @@ func (m *Message) Decode(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if !m.Header.CheckMagicNumber() {
+	if !m.Header.checkMagicNumber() {
 		// should never goes here
 		return fmt.Errorf("wrong magic number: %v", m.Header[0])
 	}
