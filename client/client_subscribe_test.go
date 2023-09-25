@@ -20,6 +20,12 @@ type callback struct {
 	T *testing.T
 }
 
+// TestSub is a test function for testing the Subscribe and UnSubscribe methods of the Client struct.
+//
+// This function starts a server, initializes a callback, parses flags, creates a client with a password option, and connects to the server.
+// It then subscribes to a channel and checks for any errors. If there is an error, it checks if the error is an invalid URL and logs a pass message.
+// After a delay, it unsubscribes from the channel and then subscribes again.
+// Finally, it waits for another delay.
 func TestSub(t *testing.T) {
 	startServer()
 

@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// pingLoop runs a loop to send ping messages to the server and handle the responses.
+// If timeout counts lager than PingLost, it will try to reconnect the connection.
 func (client *Client) pingLoop() {
 	IntervalTime := time.Duration(client.option.PingInterval) * time.Second
 	ticker := time.NewTicker(IntervalTime)

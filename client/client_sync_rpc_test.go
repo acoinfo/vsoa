@@ -15,6 +15,11 @@ type RpcTestParam struct {
 	Num int `json:"Test Num"`
 }
 
+// TestRPC is a test function that performs RPC calls.
+//
+// TestRPC sets up a server, parses flags, creates a client with a password, connects to a specified address,
+// and makes RPC calls to "/a/b/c" with different parameters. It logs the sequence number and parameters of the reply.
+// The function also handles errors and logs specific messages for invalid URLs.
 func TestRPC(t *testing.T) {
 	startServer()
 	flag.Parse()

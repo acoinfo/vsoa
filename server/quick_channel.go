@@ -10,6 +10,9 @@ import (
 	"runtime"
 )
 
+// serveQuickListener serves the UDP listener of the VsoaServer.
+//
+// It takes an address string as a parameter and returns an error.
 func (s *VsoaServer) serveQuickListener(address string) (err error) {
 	qAddrServer := (*net.UDPAddr)(s.ln.Addr().(*net.TCPAddr))
 	qln, err := net.ListenUDP("udp", qAddrServer)
@@ -50,6 +53,10 @@ func (s *VsoaServer) serveQuickListener(address string) (err error) {
 
 }
 
+// processOneQuickRequest processes a single quick request.
+//
+// It takes in a req of type *protocol.Message and ClientUid of type uint32.
+// It does not return anything.
 func (s *VsoaServer) processOneQuickRequest(req *protocol.Message, ClientUid uint32) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -17,6 +17,7 @@ type DatagramTestParam struct {
 	Num int `json:"Test Num"`
 }
 
+// TestDatagram is a test function that sends a datagram to the server(TCP).
 func TestDatagram(t *testing.T) {
 	startDatagramServer(t)
 	flag.Parse()
@@ -47,6 +48,7 @@ func TestDatagram(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 }
 
+// TestDatagramQuick is a function that tests the datagram functionality in Quick Channel(UDP).
 func TestDatagramQuick(t *testing.T) {
 	startDatagramServer(t)
 	flag.Parse()
@@ -77,6 +79,9 @@ func TestDatagramQuick(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 }
 
+// startDatagramServer initializes a golang server and registers URL handlers.
+//
+// It takes a *testing.T parameter for logging purposes.
 func startDatagramServer(t *testing.T) {
 	// Init golang server
 	serverOption := server.Option{
