@@ -107,12 +107,11 @@ func TestRPCMixed(t *testing.T) {
 	Call1 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req1, reply, nil).Done
 	Call2 := c.Go("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, req2, reply, nil).Done
 
-	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
+	_, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodGet, reqSync)
 	if err != nil {
 		t.Fatal(err)
-	} else {
-		//Do nothing since It's mixed with async calls
 	}
+	//else case: Do nothing since It's mixed with async calls
 
 	for i := 0; i < 2; i++ {
 		select {
