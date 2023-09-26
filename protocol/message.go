@@ -106,36 +106,46 @@ func (h *Header) SetMessageType(mt MessageType) {
 	smt(h, mt)
 }
 
+func ir(h Header) (ret bool)
+
 // IsRPC returns whether the message is RPC message.
 func (h Header) IsRPC() bool {
-	return h[1] == byte(TypeRPC)
+	return ir(h)
 }
+
+func ipe(h Header) (ret bool)
 
 // IsPingEcho returns whether the message is ping echo message.
 func (h Header) IsPingEcho() bool {
-	return h[1] == byte(TypePingEcho)
+	return ipe(h)
 }
+
+func isi(h Header) (ret bool)
 
 // IsServInfo returns whether the message is service info message.
 func (h Header) IsServInfo() bool {
-	return h[1] == byte(TypeServInfo)
+	return isi(h)
 }
+
+func iss(h Header) (ret bool)
 
 // IsSubscribe returns whether the message is subscribe message.
 func (h Header) IsSubscribe() bool {
-	return h[1] == byte(TypeSubscribe)
+	return iss(h)
 }
+
+func ius(h Header) (ret bool)
 
 // IsUnSubscribe returns whether the message is unsubscribe info message.
 func (h Header) IsUnSubscribe() bool {
-	return h[1] == byte(TypeUnsubscribe)
+	return ius(h)
 }
 
+func id(h Header) (ret bool)
+func ip(h Header) (ret bool)
+
 func (h Header) IsOneway() bool {
-	switch h[1] {
-	case byte(TypeDatagram):
-		fallthrough
-	case byte(TypePublish):
+	if id(h) && ip(h) {
 		return true
 	}
 	return false
