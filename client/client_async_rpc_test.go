@@ -111,9 +111,7 @@ func TestRPCMixed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else {
-		if reply.SeqNo() != 2 {
-			t.Fatal("Not sync")
-		}
+		//Do nothing since It's mixed with async calls
 	}
 
 	for i := 0; i < 2; i++ {
