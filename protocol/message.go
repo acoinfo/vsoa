@@ -145,7 +145,7 @@ func id(h Header) (ret bool)
 func ip(h Header) (ret bool)
 
 func (h Header) IsOneway() bool {
-	if id(h) && ip(h) {
+	if id(h) || ip(h) {
 		return true
 	}
 	return false
