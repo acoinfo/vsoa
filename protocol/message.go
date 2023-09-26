@@ -166,25 +166,32 @@ func (h Header) IsReply() bool {
 	return iR(h)
 }
 
+func sRt(h *Header)
+func sRf(h *Header)
+
 // SetReply sets the reply flag.
 func (h *Header) SetReply(r bool) {
 	if r {
-		h[2] = h[2] | 0x01
+		sRt(h)
 	} else {
-		h[2] = h[2] &^ 0x01
+		sRf(h)
 	}
 }
+
+func ivt(h Header) (ret bool)
 
 // ValidTunid returns whether the message has a valid tunid.
 // RES now
 func (h Header) IsValidTunid() bool {
-	return h[2]&0x02 == 0x02
+	return ivt(h)
 }
+
+func svt(h *Header)
 
 // SetReply sets the reply flag.
 // RES now
 func (h *Header) SetValidTunid() {
-	h[2] = h[2] | 0x02
+	svt(h)
 }
 
 // MessageRpcMethod returns the rpc method.

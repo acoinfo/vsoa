@@ -122,3 +122,33 @@ TEXT    ·iR(SB), NOSPLIT, $0
 iRn:
   MOVW    $0x00, r+16(FP)
   RET
+
+TEXT    ·sRt(SB), NOSPLIT, $0
+  MOVQ     sRt+0(FP), BX
+  MOVQ     $0x01, AX
+  ORB      AX, 2(BX)
+  RET
+
+TEXT    ·sRf(SB), NOSPLIT, $0
+  MOVQ     sRt+0(FP), BX
+  MOVQ     $0xfe, AX
+  ANDB     AX, 2(BX)
+  RET
+
+TEXT    ·ivt(SB), NOSPLIT, $0
+  MOVB    ivt+2(FP), AX
+  ANDB    $0x02, AX
+  MOVW    $0x02, BX
+  CMPB    AX, BX
+  JNE     ivtn
+  MOVW    $0x01, r+16(FP)
+  RET
+ivtn:
+  MOVW    $0x00, r+16(FP)
+  RET
+
+TEXT    ·svt(SB), NOSPLIT, $0
+  MOVQ     svt+0(FP), BX
+  MOVQ     $0x02, AX
+  ORB      AX, 2(BX)
+  RET
