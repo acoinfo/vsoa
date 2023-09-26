@@ -120,8 +120,9 @@ ipy:
   RET
 
 TEXT    ·iR(SB), NOSPLIT, $0
-  MOVB     iR+1(FP), R0
-  ANDB     $0x01, R1
+  MOVB     iR+2(FP), R0
+  AND      $0x01, R0
+  MOVW     $0x01, R1
   CMP      R1, R0
   BEQ      iRy
   MOVW     $0x00, ret+16(FP)  
