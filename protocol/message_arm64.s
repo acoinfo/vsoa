@@ -118,3 +118,15 @@ ipy:
   MOVW     $0x01, R3
   MOVW     R3, ret+16(FP)
   RET
+
+TEXT    ·iR(SB), NOSPLIT, $0
+  MOVB     iR+1(FP), R0
+  ANDB     $0x01, R1
+  CMP      R1, R0
+  BEQ      iRy
+  MOVW     $0x00, ret+16(FP)  
+  RET
+iRy:
+  MOVW     $0x01, R3
+  MOVW     R3, ret+16(FP)
+  RET

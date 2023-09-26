@@ -111,3 +111,14 @@ ipn:
   MOVW    $0x00, r+16(FP)
   RET
 
+TEXT    ·iR(SB), NOSPLIT, $0
+  MOVB    iR+2(FP), AX
+  ANDB    $0x01, AX
+  MOVW    $0x01, BX
+  CMPB    AX, BX
+  JNE     iRn
+  MOVW    $0x01, r+16(FP)
+  RET
+iRn:
+  MOVW    $0x00, r+16(FP)
+  RET

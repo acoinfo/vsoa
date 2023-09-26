@@ -159,9 +159,11 @@ func (h *Header) SetPingEcho() {
 	spe(h)
 }
 
+func iR(h Header) (ret bool)
+
 // IsReply returns whether the message is reply message.
 func (h Header) IsReply() bool {
-	return h[2]&0x01 == 0x01
+	return iR(h)
 }
 
 // SetReply sets the reply flag.
