@@ -134,21 +134,25 @@ iRy:
 
 TEXT    ·sRt(SB), NOSPLIT, $0
   MOVD     sRt+0(FP), R0
+  MOVB     2(R0), R2
   MOVW     $0x01, R1
-  OR       R1, 2(R0)
+  ORR      R1, R2
+  MOVB     R1, 2(R0)
   RET
 
 TEXT    ·sRf(SB), NOSPLIT, $0
   MOVD     sRt+0(FP), R0
   MOVW     $0xfe, R1
-  AND      R1, 2(R0)
+  MOVB     2(R0), R2
+  AND      R2, R1
+  MOVB     R1, 2(R0)
   RET
 
 TEXT    ·ivt(SB), NOSPLIT, $0
   MOVB    ivt+2(FP), R0
   AND     $0x02, R0
   MOVW    $0x02, R1
-  CMPB    R1, R0
+  CMP     R1, R0
   BEQ     ivty
   MOVW    $0x00, ret+16(FP)  
   RET
@@ -159,5 +163,8 @@ ivty:
 
 TEXT    ·svt(SB), NOSPLIT, $0
   MOVD     svt+0(FP), R0
+  MOVB     2(R0), R2
   MOVW     $0x02, R1
-  OR       R1, 2(R0)
+  ORR      R1, R2
+  MOVB     R1, 2(R0)
+  RET
