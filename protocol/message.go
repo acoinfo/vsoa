@@ -62,9 +62,11 @@ type Message struct {
 	Data  []byte
 }
 
+func smn(h *Header)
+
 func NewMessage() *Message {
 	header := Header([HdrLength]byte{})
-	header[0] = magicNumber
+	smn(&header)
 
 	return &Message{
 		Header: &header,

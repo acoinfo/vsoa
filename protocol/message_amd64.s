@@ -1,5 +1,11 @@
 #include  "textflag.h"
 
+TEXT    ·smn(SB), NOSPLIT, $0
+  MOVQ     smn+0(FP), BX
+  MOVW     $0x29, AX
+  MOVB     AX, 0(BX)
+  RET
+
 TEXT    ·cmn(SB), NOSPLIT, $0
   MOVB    cmn+0(FP), AX
   MOVW    $0x29, BX
