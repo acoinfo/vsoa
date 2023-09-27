@@ -158,3 +158,21 @@ TEXT    ·svt(SB), NOSPLIT, $0
   MOVQ     $0x02, AX
   ORB      AX, 2(BX)
   RET
+
+TEXT    ·mrm(SB), NOSPLIT, $0
+  MOVB    mrm+2(FP), AX
+  ANDB    $0x04, AX
+  MOVB    AX, r+16(FP)
+  RET
+
+TEXT    ·smrmg(SB), NOSPLIT, $0
+  MOVQ    smrmg+0(FP), BX
+  MOVQ    $0xfb, AX
+  ANDB    AX, 2(BX)
+  RET
+
+TEXT    ·smrms(SB), NOSPLIT, $0
+  MOVQ     smrms+0(FP), BX
+  MOVQ     $0x04, AX
+  ORB      AX, 2(BX)
+  RET

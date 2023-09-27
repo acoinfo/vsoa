@@ -196,11 +196,13 @@ func (h *Header) SetValidTunid() {
 	svt(h)
 }
 
+func mrm(h Header) (ret byte)
+
 // MessageRpcMethod returns the rpc method.
 // If it's not a RPC message in VSOA then it return 0xee
 func (h Header) MessageRpcMethod() RpcMessageType {
 	if h.IsRPC() {
-		return RpcMessageType(h[2] & 0x4)
+		return RpcMessageType(mrm(h))
 	} else {
 		return NoneRpc
 	}
@@ -211,13 +213,16 @@ func (h Header) MessageRpcMethodText() string {
 	return RpcMethodText(h.MessageRpcMethod())
 }
 
+func smrmg(h *Header)
+func smrms(h *Header)
+
 // MessageRpcMethod returns the rpc method.
 // If it's not a RPC message in VSOA then it return 0xee
 func (h *Header) SetMessageRpcMethod(t RpcMessageType) {
 	if t == RpcMethodGet {
-		h[2] &^= 0x4
+		smrmg(h)
 	} else {
-		h[2] |= 0x4
+		smrms(h)
 	}
 }
 
