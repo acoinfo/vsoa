@@ -22,6 +22,8 @@ cmny:
 TEXT    ·vs(SB), NOSPLIT, $0
   MOVB     vs+0(FP), R1
   LSR      $4, R1
+  MOVW     $0x0f, R2
+  AND      R2, R1
   MOVB     R1, ret+16(FP)  
   RET
 
@@ -201,6 +203,8 @@ TEXT    ·smrms(SB), NOSPLIT, $0
 TEXT    ·pl(SB), NOSPLIT, $0
   MOVB     pl+2(FP), R1
   LSR      $6, R1
+  MOVW     $0x03, R2
+  AND      R2, R1
   MOVB     R1, ret+16(FP)  
   RET
 
