@@ -234,15 +234,56 @@ TEXT    ·sst(SB), NOSPLIT, $0
 
 TEXT    ·sn(SB), NOSPLIT, $0
   MOVD     $0x00, R0
-  MOVB     sst+4(FP), R0
-  MOVB     sst+5(FP), R1
-  MOVB     sst+6(FP), R2
-  MOVB     sst+7(FP), R3
-  LSR      $8, R0
+  MOVB     sn+4(FP), R0
+  MOVB     sn+5(FP), R1
+  MOVB     sn+6(FP), R2
+  MOVB     sn+7(FP), R3
+  LSL      $8, R0
   ORR      R1, R0
-  LSR      $8, R0
+  LSL      $8, R0
   ORR      R2, R0
-  LSR      $8, R0
+  LSL      $8, R0
   ORR      R3, R0
   MOVD     R0, ret+16(FP)
+  RET
+
+TEXT    ·ssn(SB), NOSPLIT, $0
+  MOVD     ssn+0(FP), R0
+  MOVD     ssn+8(FP), R1
+  MOVD     R1, R2
+  AND      $0xff ,R1
+  MOVB     R1, 7(R0)
+  MOVD     R2, R1
+  LSR      $8, R1
+  AND      $0xff ,R1
+  MOVB     R1, 6(R0)
+  MOVD     R2, R1
+  LSR      $16, R1
+  AND      $0xff ,R1
+  MOVB     R1, 5(R0)
+  MOVD     R2, R1
+  LSR      $24, R1
+  AND      $0xff ,R1
+  MOVB     R1, 4(R0)
+  RET
+
+TEXT    ·tid(SB), NOSPLIT, $0
+  MOVw     $0x00, R0
+  MOVB     sn+8(FP), R0
+  MOVB     sn+9(FP), R1
+  LSL      $8, R0
+  ORR      R1, R0
+  MOVW     R0, ret+16(FP)
+  RET
+
+TEXT    ·stid(SB), NOSPLIT, $0
+  MOVD     ssn+0(FP), R0
+  MOVD     ssn+8(FP), R1
+  MOVD     R1, R2
+  AND      $0xff ,R1
+  MOVB     R1, 9(R0)
+  MOVD     R2, R1
+  LSR      $8, R1
+  AND      $0xff ,R1
+  MOVB     R1, 8(R0)
   RET

@@ -267,20 +267,26 @@ func (h Header) SeqNo() uint32 {
 	return sn(h)
 }
 
+func ssn(h *Header, seq uint32)
+
 // SetSeqNo sets  sequence number.
 func (h *Header) SetSeqNo(seq uint32) {
-	binary.BigEndian.PutUint32(h[4:8], seq)
+	ssn(h, seq)
 }
+
+func tid(h Header) (ret uint16)
 
 // TunID returns Tunnel id number for VSOA client.
 func (h Header) TunID() uint16 {
-	return binary.BigEndian.Uint16(h[8:10])
+	return tid(h)
 }
+
+func stid(h *Header, ti uint16)
 
 // SetTunID set VSOA client Tunnel id number.
 // It should be tunnel port number.
 func (h *Header) SetTunId(ti uint16) {
-	binary.BigEndian.PutUint16(h[8:10], ti)
+	stid(h, ti)
 }
 
 // Clone clones from an message.

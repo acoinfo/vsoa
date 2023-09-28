@@ -206,10 +206,10 @@ TEXT    ·sst(SB), NOSPLIT, $0
   RET
 
 TEXT    ·sn(SB), NOSPLIT, $0
-  MOVB     sst+4(FP), AX
-  MOVB     sst+5(FP), BX
-  MOVB     sst+6(FP), CX
-  MOVB     sst+7(FP), DX
+  MOVB     sn+4(FP), AX
+  MOVB     sn+5(FP), BX
+  MOVB     sn+6(FP), CX
+  MOVB     sn+7(FP), DX
   SHLQ     $8, AX
   ORB      BX, AX
   SHLQ     $8, AX
@@ -217,4 +217,44 @@ TEXT    ·sn(SB), NOSPLIT, $0
   SHLQ     $8, AX
   ORB      DX, AX
   MOVQ     AX, ret+16(FP)
+  RET
+
+TEXT    ·ssn(SB), NOSPLIT, $0
+  MOVQ     ssn+0(FP), AX
+  MOVQ     ssn+8(FP), BX
+  MOVQ     BX, CX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 7(AX)
+  MOVQ     CX, BX
+  SHRQ     $8, BX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 6(AX)
+  MOVQ     CX, BX
+  SHRQ     $16, BX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 5(AX)
+  MOVQ     CX, BX
+  SHRQ     $24, BX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 4(AX)
+  RET
+
+TEXT    ·tid(SB), NOSPLIT, $0
+  MOVB     tid+8(FP), AX
+  MOVB     tid+9(FP), BX
+  SHLW     $8, AX
+  ORB      BX, AX
+  MOVW     AX, ret+16(FP)
+  RET
+
+TEXT    ·stid(SB), NOSPLIT, $0
+  MOVQ     ssn+0(FP), AX
+  MOVQ     ssn+8(FP), BX
+  MOVQ     BX, CX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 9(AX)
+  MOVQ     CX, BX
+  SHRQ     $8, BX
+  ANDQ     $0xff ,BX
+  MOVB     BX, 8(AX)
   RET
