@@ -228,7 +228,7 @@ TEXT    ·st(SB), NOSPLIT, $0
 
 TEXT    ·sst(SB), NOSPLIT, $0
   MOVD     sst+0(FP), R0
-  MOVQ     sst+8(FP), R1
+  MOVD     sst+8(FP), R1
   MOVB     R1, 3(R0)
   RET
 
