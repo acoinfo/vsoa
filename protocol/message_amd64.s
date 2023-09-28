@@ -193,3 +193,28 @@ TEXT    ·spl(SB), NOSPLIT, $0
   ANDB     AX, DX
   ORB      DX, 2(BX) 
   RET
+
+TEXT    ·st(SB), NOSPLIT, $0
+  MOVQ     st+3(FP), AX
+  MOVB     AX, r+16(FP)
+  RET
+
+TEXT    ·sst(SB), NOSPLIT, $0
+  MOVQ     sst+0(FP), AX
+  MOVQ     sst+8(FP), BX
+  MOVB     BX, 3(AX)
+  RET
+
+TEXT    ·sn(SB), NOSPLIT, $0
+  MOVB     sst+4(FP), AX
+  MOVB     sst+5(FP), BX
+  MOVB     sst+6(FP), CX
+  MOVB     sst+7(FP), DX
+  SHLQ     $8, AX
+  ORB      BX, AX
+  SHLQ     $8, AX
+  ORB      CX, AX
+  SHLQ     $8, AX
+  ORB      DX, AX
+  MOVQ     AX, ret+16(FP)
+  RET

@@ -220,3 +220,29 @@ TEXT    ·spl(SB), NOSPLIT, $0
   ORR      R4, R2
   MOVB     R2, 2(R0)
   RET
+
+TEXT    ·st(SB), NOSPLIT, $0
+  MOVB     st+3(FP), R0
+  MOVB     R0, r+16(FP)
+  RET
+
+TEXT    ·sst(SB), NOSPLIT, $0
+  MOVD     sst+0(FP), R0
+  MOVQ     sst+8(FP), R1
+  MOVB     R1, 3(R0)
+  RET
+
+TEXT    ·sn(SB), NOSPLIT, $0
+  MOVD     $0x00, R0
+  MOVB     sst+4(FP), R0
+  MOVB     sst+5(FP), R1
+  MOVB     sst+6(FP), R2
+  MOVB     sst+7(FP), R3
+  LSR      $8, R0
+  ORR      R1, R0
+  LSR      $8, R0
+  ORR      R2, R0
+  LSR      $8, R0
+  ORR      R3, R0
+  MOVD     R0, ret+16(FP)
+  RET

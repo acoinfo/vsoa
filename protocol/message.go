@@ -241,9 +241,11 @@ func (h *Header) setPadLen(pl byte) {
 	spl(h, pl)
 }
 
+func st(h Header) (ret byte)
+
 // StatusType returns the message status type.
 func (h Header) StatusType() StatusType {
-	return StatusType(h[3])
+	return StatusType(st(h))
 }
 
 // StatusType returns the message status type in text.
@@ -251,14 +253,18 @@ func (h Header) StatusTypeText() string {
 	return StatusText(h.StatusType())
 }
 
+func sst(h *Header, mt StatusType)
+
 // SetStatusType sets message status type.
 func (h *Header) SetStatusType(mt StatusType) {
-	h[3] = byte(mt)
+	sst(h, mt)
 }
+
+func sn(h Header) (ret uint32)
 
 // SeqNo returns sequence number of messages.
 func (h Header) SeqNo() uint32 {
-	return binary.BigEndian.Uint32(h[4:8])
+	return sn(h)
 }
 
 // SetSeqNo sets  sequence number.
@@ -312,7 +318,7 @@ func (m Message) encodeSlicePointer(q QuickChannelFlag) (*[]byte, error) {
 	padL := 0
 
 	// HdrL + urlL + paramL + dataL + url + param + data
-	totalL := HdrLength + 2 + 4 + 4 + uL + pL + dL
+	totalL := HdrLength + 10 + uL + pL + dL
 
 	if totalL&3 != 0 {
 		padL = 4 - (totalL & 3)
@@ -330,7 +336,7 @@ func (m Message) encodeSlicePointer(q QuickChannelFlag) (*[]byte, error) {
 		}
 	}
 
-	urlStart := HdrLength + 2 + 4 + 4
+	urlStart := HdrLength + 10
 	paramStart := urlStart + uL
 	dataStart := paramStart + pL
 
@@ -364,7 +370,7 @@ func (m Message) WriteTo(w io.Writer) (int64, error) {
 	padL := 0
 
 	// HdrL + urlL + paramL + dataL + url + param + data
-	totalL := HdrLength + 2 + 4 + 4 + uL + pL + dL
+	totalL := HdrLength + 10 + uL + pL + dL
 
 	if totalL&3 != 0 {
 		padL = 4 - (totalL & 3)
@@ -474,7 +480,7 @@ func (m *Message) Decode(r io.Reader) error {
 	dL := int(binary.BigEndian.Uint32(dataLenData))
 
 	// HdrL + urlL + paramL + dataL + url + param + data
-	totalL := HdrLength + 2 + 4 + 4 + uL + pL + dL + padL
+	totalL := HdrLength + 10 + uL + pL + dL + padL
 
 	if totalL&3 != 0 {
 		// this cause remain unread buffered date in the Reader cause unexpact behavior for next message.
