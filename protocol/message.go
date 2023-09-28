@@ -226,16 +226,19 @@ func (h *Header) SetMessageRpcMethod(t RpcMessageType) {
 	}
 }
 
+func pl(h Header) (ret byte)
+
 // Internel use padLen return the pad length for 4 byte pad for whole massage.
 func (h Header) padLen() byte {
-	return h[2] >> 6
+	return pl(h)
 }
+
+func spl(h *Header, pl byte)
 
 // Internel use to pad the massage and fill the pad length flag automatic
 func (h *Header) setPadLen(pl byte) {
 	// clear PadLen flag
-	h[2] = h[2] & 0x3f
-	h[2] = h[2] | ((pl) << 6 & 0xc0)
+	spl(h, pl)
 }
 
 // StatusType returns the message status type.

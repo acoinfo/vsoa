@@ -197,3 +197,22 @@ TEXT    ·smrms(SB), NOSPLIT, $0
   ORR      R1, R2
   MOVB     R2, 2(R0)
   RET
+
+TEXT    ·pl(SB), NOSPLIT, $0
+  MOVB     pl+2(FP), R1
+  LSR      $6, R1
+  MOVB     R1, ret+16(FP)  
+  RET
+
+TEXT    ·spl(SB), NOSPLIT, $0
+  MOVD     spl+0(FP), R0
+  MOVB     2(R0), R2
+  MOVB     spl+8(FP), R4
+  MOVW     $0x3f, R1
+  AND      R1, R2
+  LSL      $6, R4
+  MOVW     $0xc0, R1
+  AND      R1, R4
+  ORR      R4, R2
+  MOVB     R2, 2(R0)
+  RET

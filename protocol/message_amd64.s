@@ -176,3 +176,20 @@ TEXT    ·smrms(SB), NOSPLIT, $0
   MOVQ     $0x04, AX
   ORB      AX, 2(BX)
   RET
+
+TEXT    ·pl(SB), NOSPLIT, $0
+  MOVB     pl+2(FP), AX
+  SHRB     $6, AX
+  MOVB     AX, ret+16(FP)  
+  RET
+
+TEXT    ·spl(SB), NOSPLIT, $0
+  MOVQ     spl+0(FP), BX
+  MOVB     spl+8(FP), DX
+  MOVQ     $0x3f, AX
+  ANDB     AX, 2(BX)
+  SHLB     $6, DX
+  MOVQ     $0xc0, AX
+  ANDB     AX, DX
+  ORB      DX, 2(BX) 
+  RET
