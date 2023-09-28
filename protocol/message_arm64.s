@@ -233,18 +233,24 @@ TEXT    ·sst(SB), NOSPLIT, $0
   RET
 
 TEXT    ·sn(SB), NOSPLIT, $0
-  MOVD     $0x00, R0
   MOVB     sn+4(FP), R0
   MOVB     sn+5(FP), R1
   MOVB     sn+6(FP), R2
   MOVB     sn+7(FP), R3
   LSL      $8, R0
+  AND      $0xff00, R0
+  AND      $0xff, R1
   ORR      R1, R0
   LSL      $8, R0
+  AND      $0xffff00, R0
+  AND      $0xff, R2
   ORR      R2, R0
   LSL      $8, R0
+  AND      $0xffffff00, R0
+  AND      $0xff, R3
   ORR      R3, R0
-  MOVD     R0, ret+16(FP)
+  MOVD     $0x00, ret+16(FP)
+  MOVW     R0, ret+16(FP)
   RET
 
 TEXT    ·ssn(SB), NOSPLIT, $0
