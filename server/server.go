@@ -50,6 +50,7 @@ type Handler func(req *protocol.Message, resp *protocol.Message)
 // VsoaServer is the VSOA server that use TCP with UDP.
 type VsoaServer struct {
 	Name         string //Used for ServInfo
+	address      string
 	option       Option
 	ln           net.Listener
 	readTimeout  time.Duration
@@ -108,6 +109,8 @@ func (s *VsoaServer) Serve(address string) (err error) {
 	if err != nil {
 		return err
 	}
+
+	s.address = address
 
 	// Go quick channel listener
 	go s.serveQuickListener(address)
