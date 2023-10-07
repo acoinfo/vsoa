@@ -182,16 +182,19 @@ func (h *Header) SetReply(r bool) {
 
 func ivt(h Header) (ret bool)
 
-// ValidTunid returns whether the message has a valid tunid.
-// RES now
+// IsValidTunid checks if the Header is a valid Tunid.
+//
+// It returns a boolean indicating whether the Header is a valid Tunid.
 func (h Header) IsValidTunid() bool {
 	return ivt(h)
 }
 
 func svt(h *Header)
 
-// SetReply sets the reply flag.
-// RES now
+// SetValidTunid sets the valid tunid of the Header struct.
+//
+// It takes no parameters.
+// There is no return type.
 func (h *Header) SetValidTunid() {
 	svt(h)
 }
