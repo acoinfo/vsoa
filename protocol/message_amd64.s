@@ -120,13 +120,7 @@ ipn:
 TEXT    ·iR(SB), NOSPLIT, $0
   MOVB    iR+2(FP), AX
   ANDB    $0x01, AX
-  MOVW    $0x01, BX
-  CMPB    AX, BX
-  JNE     iRn
-  MOVW    $0x01, r+16(FP)
-  RET
-iRn:
-  MOVW    $0x00, r+16(FP)
+  MOVB    AX, r+16(FP)
   RET
 
 TEXT    ·sRt(SB), NOSPLIT, $0
@@ -144,13 +138,8 @@ TEXT    ·sRf(SB), NOSPLIT, $0
 TEXT    ·ivt(SB), NOSPLIT, $0
   MOVB    ivt+2(FP), AX
   ANDB    $0x02, AX
-  MOVW    $0x02, BX
-  CMPB    AX, BX
-  JNE     ivtn
-  MOVW    $0x01, r+16(FP)
-  RET
-ivtn:
-  MOVW    $0x00, r+16(FP)
+  SHRB    $1, AX
+  MOVB    AX, r+16(FP)
   RET
 
 TEXT    ·svt(SB), NOSPLIT, $0

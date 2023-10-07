@@ -131,14 +131,7 @@ ipy:
 TEXT    ·iR(SB), NOSPLIT, $0
   MOVB     iR+2(FP), R0
   AND      $0x01, R0
-  MOVW     $0x01, R1
-  CMP      R1, R0
-  BEQ      iRy
-  MOVW     $0x00, ret+16(FP)  
-  RET
-iRy:
-  MOVW     $0x01, R3
-  MOVW     R3, ret+16(FP)
+  MOVW     R0, ret+16(FP)  
   RET
 
 TEXT    ·sRt(SB), NOSPLIT, $0
@@ -160,14 +153,8 @@ TEXT    ·sRf(SB), NOSPLIT, $0
 TEXT    ·ivt(SB), NOSPLIT, $0
   MOVB    ivt+2(FP), R0
   AND     $0x02, R0
-  MOVW    $0x02, R1
-  CMP     R1, R0
-  BEQ     ivty
-  MOVW    $0x00, ret+16(FP)  
-  RET
-ivty:
-  MOVW    $0x01, R3
-  MOVW    R3, ret+16(FP)
+  LSR     $1, R0
+  MOVW    R0, ret+16(FP)  
   RET
 
 TEXT    ·svt(SB), NOSPLIT, $0
