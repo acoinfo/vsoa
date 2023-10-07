@@ -61,4 +61,18 @@ func TestRPC(t *testing.T) {
 		json.Unmarshal(reply.Param, DstParam)
 		t.Log("Seq:", reply.SeqNo(), "Param:", DstParam, "Unmarshaled data:", DstParam.Num)
 	}
+
+	req.Param, _ = json.RawMessage(`{"Test Num":123}`).MarshalJSON()
+	reply, err = c.Call("/a/b/c", protocol.TypeRPC, protocol.RpcMethodSet, req)
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	} else {
+		DstParam := new(RpcTestParam)
+		json.Unmarshal(reply.Param, DstParam)
+		t.Log("Seq:", reply.SeqNo(), "Param:", DstParam, "Unmarshaled data:", DstParam.Num)
+	}
 }

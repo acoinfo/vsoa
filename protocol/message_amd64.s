@@ -162,6 +162,7 @@ TEXT    ·svt(SB), NOSPLIT, $0
 TEXT    ·mrm(SB), NOSPLIT, $0
   MOVB    mrm+2(FP), AX
   ANDB    $0x04, AX
+  SHRB    $2, AX
   MOVB    AX, r+16(FP)
   RET
 

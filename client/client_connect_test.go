@@ -65,6 +65,12 @@ func startServer() {
 	}
 	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
 
+	hs := func(req, res *protocol.Message) {
+		res.Param = req.Param
+		res.Data = req.Data
+	}
+	s.AddRpcHandler("/a/b/c", protocol.RpcMethodSet, hs)
+
 	pubs := func(req, _ *protocol.Message) {
 		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing"}`).MarshalJSON()
 	}
