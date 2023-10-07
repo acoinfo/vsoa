@@ -181,7 +181,7 @@ TEXT    ·svt(SB), NOSPLIT, $0
 TEXT    ·mrm(SB), NOSPLIT, $0
   MOVB    mrm+2(FP), R0
   AND     $0x04, R0
-  LSR     $2, R1
+  LSR     $2, R0
   MOVB    R0, r+16(FP)
   RET
 
