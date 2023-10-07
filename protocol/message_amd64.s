@@ -1,3 +1,12 @@
+// Copyright (c) 2023 ACOAUTO Team.
+// All rights reserved.
+//
+// Detailed license information can be found in the LICENSE file.
+//
+// File: message_amd64.s Vehicle SOA protocal package.
+//
+// Author: Cheng.siyuan <chengsiyuan@acoinfo.com>
+
 #include  "textflag.h"
 
 TEXT    ·smn(SB), NOSPLIT, $0
