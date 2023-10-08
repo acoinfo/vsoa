@@ -3,16 +3,20 @@ package position
 import (
 	"flag"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
 
 var (
-	position_addr = flag.String("position_addr", "localhost:6002", "position address")
+	position_addr     = flag.String("position_addr", "localhost:6002", "position address")
+	StartPositionOnce sync.Once
 )
 
 func TestPositionLookUP(t *testing.T) {
-	positionServerStart()
+	StartPositionOnce.Do(func() {
+		positionServerStart()
+	})
 	flag.Parse()
 
 	p := new(Position)
@@ -27,7 +31,9 @@ func TestPositionLookUP(t *testing.T) {
 }
 
 func TestPositionLookUPTimeout(t *testing.T) {
-	positionServerStart()
+	StartPositionOnce.Do(func() {
+		positionServerStart()
+	})
 	flag.Parse()
 
 	p := new(Position)
