@@ -15,15 +15,15 @@ import (
 // It takes an address string as a parameter and returns an error.
 func (s *VsoaServer) serveQuickListener(address string) (err error) {
 	qAddrServer := (*net.UDPAddr)(s.ln.Addr().(*net.TCPAddr))
-	qln, err := net.ListenUDP("udp", qAddrServer)
+	s.qln, err = net.ListenUDP("udp", qAddrServer)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer qln.Close()
+	defer s.qln.Close()
 
 	for {
 		buf := make([]byte, 1024)
-		_, addr, err := qln.ReadFromUDP(buf)
+		_, addr, err := s.qln.ReadFromUDP(buf)
 		qAddr := addr.String()
 		if err != nil {
 			continue
@@ -36,7 +36,7 @@ func (s *VsoaServer) serveQuickListener(address string) (err error) {
 						err = req.Decode(r)
 						if err != nil {
 							if errors.Is(err, io.EOF) {
-								log.Printf("Vsoa client has closed this connection: %s", qln.RemoteAddr().String())
+								log.Printf("Vsoa client has closed this connection: %s", s.qln.RemoteAddr().String())
 							}
 
 							if s.HandleServiceError != nil {

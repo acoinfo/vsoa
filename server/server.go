@@ -53,6 +53,7 @@ type VsoaServer struct {
 	address      string
 	option       Option
 	ln           net.Listener
+	qln          *net.UDPConn
 	readTimeout  time.Duration
 	writeTimeout time.Duration
 
@@ -101,7 +102,6 @@ func NewServer(name string, so Option) *VsoaServer {
 }
 
 // Serve starts and listens VSOA normal channel requests.
-// TODO: we need to start listen Quick channel too!
 // It is blocked until receiving connections from clients.
 func (s *VsoaServer) Serve(address string) (err error) {
 	var ln net.Listener
@@ -461,6 +461,21 @@ func (s *VsoaServer) AddPublisher(servicePath string, timeDriction time.Duration
 		s.routeMap["SUBS/UNSUBS."+servicePath] = pubs
 		// Maybe it's bad to run a Publisher for each pub
 		go s.publisher(servicePath, timeDriction, pubs)
+	} else {
+		return ErrAlreadyRegistered
+	}
+	return nil
+}
+
+func (s *VsoaServer) AddQPublisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) (err error) {
+	s.routerMapMu.Lock()
+	defer s.routerMapMu.Unlock()
+
+	if _, ok := s.routeMap["SUBS/UNSUBS."+servicePath]; !ok {
+		// No need to have handler save in the routeMap
+		s.routeMap["SUBS/UNSUBS."+servicePath] = pubs
+		// Maybe it's bad to run a Publisher for each pub
+		go s.qpublisher(servicePath, timeDriction, pubs)
 	} else {
 		return ErrAlreadyRegistered
 	}

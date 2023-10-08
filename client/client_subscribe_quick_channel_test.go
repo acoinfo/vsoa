@@ -9,15 +9,11 @@ import (
 )
 
 var (
-	publish_server_addr = flag.String("publish_server_addr", "localhost:3003", "server address")
+	publish_server_quick_addr = flag.String("publish_server_quick_addr", "localhost:3003", "server address")
 )
 
-type PublishTestParam struct {
+type QPublishTestParam struct {
 	Publish string `json:"publish"`
-}
-
-type callback struct {
-	T *testing.T
 }
 
 // TestSub is a test function for testing the Subscribe and UnSubscribe methods of the Client struct.
@@ -26,7 +22,7 @@ type callback struct {
 // It then subscribes to a channel and checks for any errors. If there is an error, it checks if the error is an invalid URL and logs a pass message.
 // After a delay, it unsubscribes from the channel and then subscribes again.
 // Finally, it waits for another delay.
-func TestSub(t *testing.T) {
+func TestSubQuickChannel(t *testing.T) {
 	startServer()
 
 	cb := new(callback)
@@ -39,14 +35,14 @@ func TestSub(t *testing.T) {
 	}
 
 	c := NewClient(clientOption)
-	_, err := c.Connect("vsoa", *publish_server_addr)
+	_, err := c.Connect("vsoa", *publish_server_quick_addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
 
 	// client don't know if it's quick channel or not
-	err = c.Subscribe("/p", cb.getPublishParam)
+	err = c.Subscribe("/p/q", cb.getQPublishParam)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
 			t.Log("Pass: Invalid URL")
@@ -57,18 +53,18 @@ func TestSub(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	c.UnSubscribe("/p")
+	c.UnSubscribe("/p/q")
 
 	time.Sleep(2 * time.Second)
 
-	c.Subscribe("/p", cb.getPublishParam)
+	c.Subscribe("/p/q", cb.getQPublishParam)
 
 	time.Sleep(2 * time.Second)
 }
 
 // User can create callback struct to put/get more info into callback func
-func (c callback) getPublishParam(m *protocol.Message) {
-	DstParam := new(PublishTestParam)
+func (c callback) getQPublishParam(m *protocol.Message) {
+	DstParam := new(QPublishTestParam)
 	json.Unmarshal(m.Param, DstParam)
 	c.T.Log("Param:", DstParam.Publish)
 }

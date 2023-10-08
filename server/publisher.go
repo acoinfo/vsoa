@@ -35,7 +35,6 @@ func (s *VsoaServer) publisher(servicePath string, timeDriction time.Duration, p
 func (s *VsoaServer) sendMessage(req *protocol.Message, conn net.Conn) error {
 	req.SetMessageType(protocol.TypePublish)
 
-	//	req.SeqNo(seq)
 	req.SetReply(false)
 
 	tmp, err := req.Encode(protocol.ChannelNormal)
