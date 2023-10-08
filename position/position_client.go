@@ -14,8 +14,8 @@ type LookUpRequest struct {
 
 // ErrShutdown connection is closed.
 var (
-	ErrLookUpTimeOut  = errors.New("LookUp timeout")
-	ErrServerNotFound = errors.New("server not found")
+	ErrLookUpTimeOut  = errors.New("Position: LookUp timeout")
+	ErrServerNotFound = errors.New("Position: server not found")
 )
 
 func (p *Position) LookUp(name string, position_addr string, timeout time.Duration) (err error) {
@@ -65,6 +65,7 @@ func (p *Position) LookUp(name string, position_addr string, timeout time.Durati
 
 	select {
 	case <-done:
+		qconn.Close()
 		if p != nil {
 			return nil
 		} else {
@@ -72,6 +73,7 @@ func (p *Position) LookUp(name string, position_addr string, timeout time.Durati
 		}
 
 	case <-time.After(timeout):
+		qconn.Close()
 		return ErrLookUpTimeOut
 	}
 }

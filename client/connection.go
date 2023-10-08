@@ -3,24 +3,66 @@ package client
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"go-vsoa/position"
 	"go-vsoa/protocol"
 	"log"
 	"net"
+	"strconv"
+	"strings"
+	"time"
 )
+
+var (
+	Type_URL = "VSOA_URL"
+)
+
+func (client *Client) SetPosition(address string) (err error) {
+	parts := strings.Split(address, ":")
+	if net.ParseIP(parts[0]) == nil && parts[0] != "localhost" {
+		return errors.New("invalid position address should be IPv4/IPv6 address")
+	}
+	client.position = address
+	return nil
+}
 
 // Connect connects the server via specified network.
 // ServInfo Shack hand is needed cause VSOA protocol
 // TODO: add position logic.
-func (client *Client) Connect(network, address string) (ServerInfo string, err error) {
+func (client *Client) Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerInfo string, err error) {
 	var conn net.Conn
 	var qconn *net.UDPConn
 
-	client.addr = address
+	client.addr = address_or_URL
 
-	switch network {
+	switch vsoa_or_VSOA_URL {
+	case "VSOA_URL":
+		//TODO: If position server change address, need to update all relevant connections
+		if client.position == "" {
+			return "", errors.New("position server not set with client.SetPosition()")
+		}
+		p := new(position.Position)
+
+		parts := strings.Split(address_or_URL, "://")
+		if len(parts) != 2 {
+			err := p.LookUp(address_or_URL, client.position, 500*time.Millisecond)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			parts := strings.Split(address_or_URL, "://")
+			err := p.LookUp(parts[1], client.position, 500*time.Millisecond)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		client.addr = p.IP + ":" + strconv.Itoa(p.Port)
+		println("client.addr", client.addr)
+		fallthrough
 	default:
-		conn, err = newDirectConn(client, address)
+		conn, err = newDirectConn(client, client.addr)
 
 		if err == nil && conn != nil {
 			client.Conn = conn
@@ -32,7 +74,7 @@ func (client *Client) Connect(network, address string) (ServerInfo string, err e
 			return "", err
 		}
 
-		qconn, err = newQuickConn(client, address)
+		qconn, err = newQuickConn(client, client.addr)
 		{
 			if err == nil && conn != nil {
 				client.QConn = qconn

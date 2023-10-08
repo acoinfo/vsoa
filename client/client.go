@@ -80,9 +80,10 @@ type VsoaClient interface {
 
 // Client represents a VSOA client. (For NOW it's only RPC&ServInfo)
 type Client struct {
-	addr   string
-	option Option
-	uid    uint32
+	addr     string
+	position string
+	option   Option
+	uid      uint32
 
 	Conn net.Conn
 	r    *bufio.Reader
@@ -495,8 +496,12 @@ func (client *Client) Close() error {
 	client.closing = true
 	client.mutex.Unlock()
 
-	client.QConn.Close()
-	err = client.Conn.Close()
+	if client.QConn != nil {
+		client.QConn.Close()
+	}
+	if client.Conn != nil {
+		err = client.QConn.Close()
+	}
 
 	return err
 }
