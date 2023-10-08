@@ -13,7 +13,7 @@ type ClientStream struct {
 	addr  string
 	tunid uint16
 
-	Conn net.Conn
+	conn net.Conn
 }
 
 func (client *Client) NewClientStream(tunid uint16) (cs *ClientStream, err error) {
@@ -39,10 +39,18 @@ func (client *Client) NewClientStream(tunid uint16) (cs *ClientStream, err error
 	return &ClientStream{
 		addr:  address,
 		tunid: tunid,
-		Conn:  conn,
+		conn:  conn,
 	}, nil
 }
 
 func (cs *ClientStream) StopClientStream() (err error) {
-	return cs.Conn.Close()
+	return cs.conn.Close()
+}
+
+func (cs *ClientStream) Read(buf []byte) (int, error) {
+	return cs.conn.Read(buf)
+}
+
+func (cs *ClientStream) Write(buf []byte) (int, error) {
+	return cs.conn.Write(buf)
 }

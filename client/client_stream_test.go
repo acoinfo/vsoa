@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"go-vsoa/protocol"
 	"go-vsoa/server"
 	"io"
@@ -12,7 +11,7 @@ import (
 )
 
 var (
-	stream_addr = flag.String("stream_addr", "localhost:3002", "server address")
+	stream_addr = flag.String("stream_addr", "localhost:3002", "stream server address")
 )
 
 func TestStream(t *testing.T) {
@@ -55,28 +54,33 @@ func TestStream(t *testing.T) {
 		go func() {
 			buf := make([]byte, 32*1024)
 			for {
-				n, err := cs.Conn.Read(buf)
+				n, err := cs.Read(buf)
 				if err != nil {
+					// EOF means stream cloesed
 					if err == io.EOF {
 						break
 					} else {
-						fmt.Println(err)
+						t.Log(err)
 						break
 					}
 				}
 				receiveBuf.Write(buf[:n])
+				t.Log("stream receiveBuf:", receiveBuf.String())
 
-				cs.Conn.Write(receiveBuf.Bytes())
+				// Push data back to stream server
+				cs.Write(receiveBuf.Bytes())
+
+				//In this test, we just receive little data from server, so we just stop here
+				goto STOP
 			}
-			//io.Copy(receiveBuf, cs.Conn)
-			t.Log("stream receiveBuf:", receiveBuf.String())
-			io.Copy(cs.Conn, receiveBuf)
-		}()
 
-		// don't close too quick before server handle the Call
-		time.Sleep(5 * time.Millisecond)
-		cs.Conn.Close()
+		STOP:
+			cs.conn.Close()
+		}()
 	}
+
+	// don't close too quick before server handle the Call
+	time.Sleep(5 * time.Millisecond)
 }
 
 func startStreamServer(t *testing.T) {
@@ -102,5 +106,5 @@ func startStreamServer(t *testing.T) {
 		_ = s.Serve("127.0.0.1:3002")
 	}()
 	//defer s.Close()
-	// Done init golang server
+	// Done init golang stream server
 }
