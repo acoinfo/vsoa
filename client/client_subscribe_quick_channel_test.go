@@ -25,6 +25,9 @@ type QPublishTestParam struct {
 func TestSubQuickChannel(t *testing.T) {
 	startServer()
 
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
+
 	cb := new(callback)
 	cb.T = t
 

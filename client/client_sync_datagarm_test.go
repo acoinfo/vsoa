@@ -22,6 +22,9 @@ func TestDatagram(t *testing.T) {
 	startDatagramServer(t)
 	flag.Parse()
 
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
+
 	clientOption := Option{
 		Password: "123456",
 	}
@@ -52,6 +55,9 @@ func TestDatagram(t *testing.T) {
 func TestDatagramQuick(t *testing.T) {
 	startDatagramServer(t)
 	flag.Parse()
+
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
 
 	clientOption := Option{
 		Password: "123456",

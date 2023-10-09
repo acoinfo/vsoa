@@ -24,6 +24,8 @@ var (
 func TestGoodConnect(t *testing.T) {
 	StartServerOnce.Do(func() {
 		startServer()
+		// Do this to make sure the server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 	flag.Parse()
 
@@ -44,6 +46,8 @@ func TestGoodConnect(t *testing.T) {
 func TestWorngPasswdConnect(t *testing.T) {
 	StartServerOnce.Do(func() {
 		startServer()
+		// Do this to make sure the server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 	flag.Parse()
 
@@ -66,9 +70,13 @@ func TestWorngPasswdConnect(t *testing.T) {
 func TestConnectWithPosition(t *testing.T) {
 	StartPositionOnce.Do(func() {
 		startPosition()
+		// Do this to make sure the position server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 	StartServerOnce.Do(func() {
 		startServer()
+		// Do this to make sure the server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 
 	clientOption := Option{
@@ -92,9 +100,13 @@ func TestConnectWithPosition(t *testing.T) {
 func TestConnectWithPositionNotFound(t *testing.T) {
 	StartPositionOnce.Do(func() {
 		startPosition()
+		// Do this to make sure the position server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 	StartServerOnce.Do(func() {
 		startServer()
+		// Do this to make sure the server is ready on slow machine
+		time.Sleep(50 * time.Millisecond)
 	})
 
 	clientOption := Option{

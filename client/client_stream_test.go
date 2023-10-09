@@ -18,6 +18,9 @@ func TestStream(t *testing.T) {
 	startStreamServer(t)
 	flag.Parse()
 
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
+
 	var StreamTunID uint16
 
 	clientOption := Option{

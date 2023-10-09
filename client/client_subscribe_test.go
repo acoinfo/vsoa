@@ -29,6 +29,9 @@ type callback struct {
 func TestSub(t *testing.T) {
 	startServer()
 
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
+
 	cb := new(callback)
 	cb.T = t
 

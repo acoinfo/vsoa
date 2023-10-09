@@ -5,6 +5,7 @@ import (
 	"flag"
 	"go-vsoa/protocol"
 	"testing"
+	"time"
 )
 
 var (
@@ -14,6 +15,9 @@ var (
 func TestMutilClientsConnect(t *testing.T) {
 	startServer()
 	flag.Parse()
+
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
 
 	clientOption := Option{
 		Password: "123456",
