@@ -271,14 +271,15 @@ TEXT    ·ssn(SB), NOSPLIT, $0
   RET
 
 TEXT    ·tid(SB), NOSPLIT, $0
-  MOVW     $0x00, R0
   MOVB     sn+8(FP), R0
   MOVB     sn+9(FP), R1
   LSL      $8, R0
+  AND      $0xff00, R0
+  AND      $0xff, R1
   ORR      R1, R0
   MOVW     R0, ret+16(FP)
   RET
-
+  
 TEXT    ·stid(SB), NOSPLIT, $0
   MOVD     ssn+0(FP), R0
   MOVD     ssn+8(FP), R1
