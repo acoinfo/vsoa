@@ -19,11 +19,12 @@ import (
 
 // ErrServerClosed is returned by the Server's Serve, ListenAndServe after a call to Shutdown or Close.
 var (
-	ErrServerClosed      = errors.New("VSOA: Server closed")
-	ErrReqReachLimit     = errors.New("request reached rate limit")
-	ErrNilHandler        = errors.New("nil handler")
-	ErrNilPublishHandler = errors.New("nil publish handler")
-	ErrAlreadyRegistered = errors.New("URL has been Registered")
+	ErrServerClosed         = errors.New("VSOA: Server closed")
+	ErrServerAlreadyStarted = errors.New("VSOA: Server Already Started")
+	ErrReqReachLimit        = errors.New("request reached rate limit")
+	ErrNilHandler           = errors.New("nil handler")
+	ErrNilPublishHandler    = errors.New("nil publish handler")
+	ErrAlreadyRegistered    = errors.New("URL has been Registered")
 )
 
 const (
@@ -41,6 +42,8 @@ type VsoaServer interface {
 	NewServer(name string, so Option) *Server
 	// Serve starts and listens VSOA normal & quick channel requests.
 	Serve(address string) (err error)
+	// Close closes VSOA server.
+	Close() (err error)
 	// On adds an RPC handler to the VsoaServer.
 	On(servicePath string, serviceMethod protocol.RpcMessageType,
 		handler func(*protocol.Message, *protocol.Message)) (err error)
@@ -96,7 +99,8 @@ type Server struct {
 	clientsCount atomic.Uint32
 	doneChan     chan struct{}
 
-	inShutdown int32
+	isStarted  atomic.Bool
+	isShutdown atomic.Bool
 	// onShutdown []func(s *VsoaServer)
 	// onRestart  []func(s *VsoaServer)
 
@@ -127,12 +131,19 @@ func NewServer(name string, so Option) *Server {
 		routeMap:      make(map[string]Handler),
 	}
 
+	s.isStarted.Store(false)
+	s.isShutdown.Store(false)
+
 	return s
 }
 
 // Serve starts and listens VSOA normal & quick channel requests.
 // It is blocked until receiving connections from clients.
 func (s *Server) Serve(address string) (err error) {
+	if s.IsStarted() {
+		return ErrServerAlreadyStarted
+	}
+
 	var ln net.Listener
 	ln, err = s.makeListener("tcp", address)
 	if err != nil {
@@ -140,11 +151,38 @@ func (s *Server) Serve(address string) (err error) {
 	}
 
 	s.address = address
+	s.isStarted.Store(true)
+	s.isShutdown.Store(false)
 
 	// Go quick channel listener
 	go s.serveQuickListener(address)
 
 	return s.serveListener(ln)
+}
+
+func (s *Server) IsStarted() bool {
+	return s.isStarted.Load()
+}
+
+func (s *Server) Close() (err error) {
+	if !s.isStarted.Load() || s.IsShutdown() {
+		return nil
+	}
+
+	for cuid := range s.activeClients {
+		s.closeConn(cuid)
+		delete(s.activeClients, cuid)
+	}
+
+	s.mu.Lock()
+	s.ln.Close()
+	s.qln.Close()
+	s.mu.Unlock()
+
+	s.isStarted.Store(false)
+	s.isShutdown.Store(true)
+
+	return nil
 }
 
 // serveListener accepts incoming connections on the Listener ln,
@@ -160,7 +198,7 @@ func (s *Server) serveListener(ln net.Listener) error {
 	for {
 		conn, e := ln.Accept()
 		if e != nil {
-			if s.isShutdown() {
+			if s.IsShutdown() {
 				<-s.doneChan
 				return ErrServerClosed
 			}
@@ -232,7 +270,7 @@ func (s *Server) sendResponse(res *protocol.Message, conn net.Conn) {
 //
 // Returns: none.
 func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
-	if s.isShutdown() {
+	if s.IsShutdown() {
 		s.closeConn(ClientUid)
 		return
 	}
@@ -250,7 +288,7 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		}
 
 		// make sure all inflight requests are handled and all drained
-		if s.isShutdown() {
+		if s.IsShutdown() {
 			<-s.doneChan
 		}
 
@@ -274,7 +312,7 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 
 	// read requests and handle it
 	for {
-		if s.isShutdown() {
+		if s.IsShutdown() {
 			return
 		}
 
@@ -303,6 +341,7 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		if !req.IsPingEcho() && !req.IsServInfo() {
 			if !s.activeClients[ClientUid].Authed {
 				// Close unauthed client
+				s.closeConn(ClientUid)
 				log.Printf("auth failed for conn %s: %v", conn.RemoteAddr().String(), protocol.StatusText(protocol.StatusPassword))
 				return
 			}
@@ -624,12 +663,12 @@ func (s *Server) subs(req *protocol.Message, ClientUid uint32) {
 	}
 }
 
-// isShutdown checks if the VsoaServer is in the shutdown state.
+// IsShutdown checks if the VsoaServer is in the shutdown state.
 //
 // It returns a boolean value indicating whether the VsoaServer is in the
 // shutdown state or not.
-func (s *Server) isShutdown() bool {
-	return atomic.LoadInt32(&s.inShutdown) == 1
+func (s *Server) IsShutdown() bool {
+	return s.isShutdown.Load()
 }
 
 // closeConn closes the connection for a given client in the VsoaServer.
