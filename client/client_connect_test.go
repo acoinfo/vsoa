@@ -153,10 +153,20 @@ func startServer() {
 	}
 	s.Publish("/p", 1*time.Second, pubs)
 
+	pubd := func(req, _ *protocol.Message) {
+		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing on /p/d/"}`).MarshalJSON()
+	}
+	s.Publish("/p/d/", 1*time.Second, pubd)
+
+	pubdd := func(req, _ *protocol.Message) {
+		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing on /p/d/d"}`).MarshalJSON()
+	}
+	s.Publish("/p/d/d", 1*time.Second, pubdd)
+
 	qpubs := func(req, _ *protocol.Message) {
 		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing-Quick"}`).MarshalJSON()
 	}
-	s.Publish("/p/q", 1*time.Second, qpubs)
+	s.QuickPublish("/p/q", 1*time.Second, qpubs)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")

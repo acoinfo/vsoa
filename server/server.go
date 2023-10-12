@@ -431,14 +431,26 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 				res.SetStatusType(protocol.StatusSuccess)
 				goto SEND
 			}
-			// wdie check if any matches
-			for route := range s.routeMap {
-				// Find everything
-				if strings.HasSuffix(route, "/") &&
-					strings.HasPrefix("SUBS/UNSUBS."+string(req.URL), route) {
-					s.subs(req, ClientUid)
-					res.SetStatusType(protocol.StatusSuccess)
+			if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)+"/"]; ok &&
+				!strings.HasSuffix(string(req.URL), "/") {
+				s.subsF(req, ClientUid)
+				res.SetStatusType(protocol.StatusSuccess)
+				goto SEND
+			}
+			if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)]; ok &&
+				strings.HasSuffix(string(req.URL), "/") {
+				for route := range s.routeMap {
+					if strings.HasPrefix(route, "SUBS/UNSUBS."+string(req.URL)) {
+						s.subsURL(req, route[12:], ClientUid)
+					}
 				}
+				res.SetStatusType(protocol.StatusSuccess)
+				goto SEND
+			}
+			if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL[:len(req.URL)-1])]; ok &&
+				strings.HasSuffix(string(req.URL), "/") {
+				s.subsS(req, ClientUid)
+				res.SetStatusType(protocol.StatusSuccess)
 				goto SEND
 			}
 			res.SetStatusType(protocol.StatusInvalidUrl)
@@ -660,6 +672,36 @@ func (s *Server) subs(req *protocol.Message, ClientUid uint32) {
 		s.activeClients[ClientUid].Subscribes[string(req.URL)] = true
 	} else {
 		s.activeClients[ClientUid].Subscribes[string(req.URL)] = false
+	}
+}
+
+func (s *Server) subsURL(req *protocol.Message, URL string, ClientUid uint32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if req.IsSubscribe() {
+		s.activeClients[ClientUid].Subscribes[URL] = true
+	} else {
+		s.activeClients[ClientUid].Subscribes[URL] = false
+	}
+}
+
+func (s *Server) subsF(req *protocol.Message, ClientUid uint32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if req.IsSubscribe() {
+		s.activeClients[ClientUid].Subscribes[string(req.URL)+"/"] = true
+	} else {
+		s.activeClients[ClientUid].Subscribes[string(req.URL)+"/"] = false
+	}
+}
+
+func (s *Server) subsS(req *protocol.Message, ClientUid uint32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if req.IsSubscribe() {
+		s.activeClients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = true
+	} else {
+		s.activeClients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = false
 	}
 }
 

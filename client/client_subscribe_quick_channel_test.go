@@ -45,7 +45,7 @@ func TestSubQuickChannel(t *testing.T) {
 	}
 	defer c.Close()
 
-	// client don't know if it's quick channel or not
+	//client don't know if it's quick channel or not
 	err = c.Subscribe("/p/q", cb.getQPublishParam)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {

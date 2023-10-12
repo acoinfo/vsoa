@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"gitee.com/sylixos/go-vsoa/protocol"
 )
@@ -58,7 +59,12 @@ func (client *Client) UnSubscribe(URL string) error {
 		client.mutex.Lock()
 		delete(client.SubscribeList, URL)
 		client.mutex.Unlock()
-	} else {
+	} else if strings.HasSuffix(URL, "/") {
+		if client.SubscribeList[URL[:len(URL)-1]] != nil {
+			client.mutex.Lock()
+			delete(client.SubscribeList, URL[:len(URL)-1])
+			client.mutex.Unlock()
+		}
 		// Already unSubscribe
 		return nil
 	}

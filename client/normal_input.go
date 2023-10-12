@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"gitee.com/sylixos/go-vsoa/protocol"
 )
@@ -23,12 +24,42 @@ func (client *Client) input() {
 
 		// This is for normal channel publish
 		if res.MessageType() == protocol.TypePublish {
-			// TODO: father URL logic
 			if act, ok := client.SubscribeList[string(res.URL)]; ok {
-				act(res)
-			} else {
+				if act != nil {
+					act(res)
+				}
 				continue
 			}
+			if act, ok := client.SubscribeList[string(res.URL)+"/"]; ok {
+				if act != nil {
+					act(res)
+				}
+				continue
+			}
+			if act, ok := client.SubscribeList[string(res.URL[:len(res.URL)-1])]; ok && strings.HasSuffix(string(res.URL), "/") {
+				if act != nil {
+					act(res)
+				}
+				continue
+			}
+			routelen := 0
+			savedAct := func(m *protocol.Message) {}
+			for route, actor := range client.SubscribeList {
+				// Find one handler and send
+				if strings.HasSuffix(route, "/") &&
+					strings.HasPrefix(string(res.URL), route) {
+					if len(route) < routelen {
+						continue
+					} else {
+						routelen = len(route)
+						savedAct = actor
+					}
+				}
+			}
+			if savedAct != nil {
+				savedAct(res)
+			}
+			continue
 		}
 
 		seq := res.SeqNo()

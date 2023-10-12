@@ -69,6 +69,10 @@ type VsoaClient interface {
 	// inject onPublish callback to the URL with father URL
 	Subscribe(URL string, onPublish func(m *protocol.Message)) error
 
+	// UnSubscribe server URL;
+	// delete onPublish callback to the URL with father URL
+	UnSubscribe(URL string) error
+
 	// If server authed this client
 	IsAuthed() bool
 	// If client is closing or not

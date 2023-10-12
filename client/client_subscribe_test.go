@@ -59,9 +59,27 @@ func TestSub(t *testing.T) {
 		}
 	}
 
+	err = c.Subscribe("/p/d/", cb.getQPublishParam)
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	}
+
 	time.Sleep(2 * time.Second)
 
 	err = c.UnSubscribe("/p")
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	}
+
+	err = c.UnSubscribe("/p/d/")
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
 			t.Log("Pass: Invalid URL")
