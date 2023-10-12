@@ -6,11 +6,17 @@ GO-VSOA is a development library for VSOA (Vision Service Oriented Architecture)
 
 ## ChangeLog
 
-### 2023/10/08
+### 2023/10/12 V1.0.3
 
-- Released Version 1.0.1
-- Added support for RPC/SUB/UNSUB/PUB/DATAGARM
-- Note: QoS is not supported
+- Change Server API!  
+- Server now can handle widecard match  
+- Change module URL to gitee.com  
+
+### 2023/10/08 V1.0.1
+
+- Release V1.0.1 ver  
+- Support RPC/SUB/UNSUB/PUB/DATAGARM  
+- Not Supoort QoS  
 
 ## Currently Supported Platforms
 
@@ -52,7 +58,7 @@ go env -w GO111MODULE=on
 ```
 
 Download this SDK to the src/ folder in GOPATH.
-Rename the go-vsoa folder to go-vsoa@v1.0.1.
+Rename the go-vsoa folder to go-vsoa@v1.0.3.
 Create two folders, `go-vsoa-server` and `go-vsoa-client`, in the src folder for the client and server, respectively.
 Go into each folder and save the following as go.mod.
 
@@ -63,9 +69,9 @@ module go-vsoa-server
 
 go 1.20
 
-require go-vsoa v1.0.1
+require gitee.com/sylixos/go-vsoa v1.0.3
 
-replace go-vsoa v1.0.1 => ../go-vsoa@v1.0.1
+replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
 ```
 
 For the `go-vsoa-client` folder:
@@ -75,9 +81,9 @@ module go-vsoa-client
 
 go 1.20
 
-require go-vsoa v1.0.1
+require gitee.com/sylixos/go-vsoa v1.0.3
 
-replace go-vsoa v1.0.1 => ../go-vsoa@v1.0.1
+replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
 ```
 
 ### Writing the Server
@@ -89,9 +95,10 @@ package main
 
 import (
     "encoding/json"
-    "go-vsoa/protocol"
-    "go-vsoa/server"
     "time"
+
+    "gitee.com/sylixos/go-vsoa/protocol"
+    "gitee.com/sylixos/go-vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -115,7 +122,7 @@ func startServer() {
         res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
         res.Data = req.Data
     }
-    s.AddRpcHandler("/light", protocol.RpcMethodGet, handleLightGet)
+    s.On("/light", protocol.RpcMethodGet, handleLightGet)
 
     // Register the light URL for the RPC SET method.
     // This allows authorized clients to control the turning on or off of the light.
@@ -134,7 +141,7 @@ func startServer() {
         res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
         res.Data = req.Data
     }
-    s.AddRpcHandler("/light", protocol.RpcMethodSet, handleLightSet)
+    s.On("/light", protocol.RpcMethodSet, handleLightSet)
 
     go func() {
         _ = s.Serve("0.0.0.0:3001")
@@ -162,8 +169,9 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-    "go-vsoa/client"
-    "go-vsoa/protocol"
+
+    "gitee.com/sylixos/go-vsoa/client"
+    "gitee.com/sylixos/go-vsoa/protocol"
 )
 
 type RpcLightParam struct {

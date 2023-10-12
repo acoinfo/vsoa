@@ -3,10 +3,11 @@ package client
 import (
 	"encoding/json"
 	"flag"
-	"go-vsoa/protocol"
-	"go-vsoa/server"
 	"testing"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
+	"gitee.com/sylixos/go-vsoa/server"
 )
 
 var (
@@ -100,17 +101,17 @@ func startDatagramServer(t *testing.T) {
 		res.Param = req.Param
 		t.Log("/datagram Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.AddOneWayHandler("/datagram", h)
+	s.OnDatagarm("/datagram", h)
 	qh := func(req, res *protocol.Message) {
 		res.Param = req.Param
 		t.Log("/datagramQuick Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.AddOneWayHandler("/datagramQuick", qh)
+	s.OnDatagarm("/datagramQuick", qh)
 	dh := func(req, res *protocol.Message) {
 		res.Param = req.Param
 		t.Log("Default Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.AddDefaultOndataHandler(dh)
+	s.OnDatagarmDefault(dh)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")

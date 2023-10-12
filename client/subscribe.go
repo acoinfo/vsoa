@@ -3,9 +3,10 @@ package client
 import (
 	"errors"
 	"fmt"
-	"go-vsoa/protocol"
 	"log"
 	"net"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // Subscribe server URL;

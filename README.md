@@ -5,11 +5,17 @@
 
 ## ChangeLog
 
-### 2023/10/08
+### 2023/10/12 V1.0.3
+
+- Change Server API!  
+- Server now can handle widecard match  
+- Change module URL to gitee.com  
+
+### 2023/10/08 V1.0.1
 
 - Release V1.0.1 ver  
-- Support RPC/SUB/UNSUB/PUB/DATAGARM
-- Not Supoort QoS
+- Support RPC/SUB/UNSUB/PUB/DATAGARM  
+- Not Supoort QoS  
 
 ## 目前可以使用的平台
 
@@ -53,7 +59,7 @@ go env -w GO111MODULE=on
 ~~~  
 
 将本SDK下载到GOPATH中的src/文件夹下  
-将go-vsoa这个文件夹的名称修改为`go-vsoa@v1.0.1`  
+将go-vsoa这个文件夹的名称修改为`go-vsoa@v1.0.3`  
 在src文件夹下创建两个文件夹`go-vsoa-server`、`go-vsoa-client`，分别放置客户端和服务端  
 
 分别进入两个文件夹并将以下文件保存为go.mod
@@ -65,9 +71,9 @@ module go-vsoa-server
 
 go 1.20
 
-require go-vsoa v1.0.1
+require gitee.com/sylixos/go-vsoa v1.0.3
 
-replace go-vsoa v1.0.1 => ../go-vsoa@v1.0.1
+replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
 ~~~  
 
 `go-vsoa-client`文件夹下：
@@ -77,9 +83,9 @@ module go-vsoa-client
 
 go 1.20
 
-require go-vsoa v1.0.1
+require gitee.com/sylixos/go-vsoa v1.0.3
 
-replace go-vsoa v1.0.1 => ../go-vsoa@v1.0.1
+replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
 ~~~  
 
 ### 编写服务端
@@ -91,9 +97,10 @@ package main
 
 import (
     "encoding/json"
-    "go-vsoa/protocol"
-    "go-vsoa/server"
     "time"
+
+    "gitee.com/sylixos/go-vsoa/protocol"
+    "gitee.com/sylixos/go-vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -117,7 +124,7 @@ func startServer() {
         res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
         res.Data = req.Data
     }
-    s.AddRpcHandler("/light", protocol.RpcMethodGet, handleLightGet)
+    s.On("/light", protocol.RpcMethodGet, handleLightGet)
 
     // 注册 light URL，RPC的SET方法
     // 允许授权的客户端操作开灯或关灯
@@ -136,7 +143,7 @@ func startServer() {
         res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
         res.Data = req.Data
     }
-    s.AddRpcHandler("/light", protocol.RpcMethodSet, handleLightSet)
+    s.On("/light", protocol.RpcMethodSet, handleLightSet)
 
     go func() {
         _ = s.Serve("0.0.0.0:3001")
@@ -164,8 +171,9 @@ import (
     "encoding/json"
     "errors"
     "fmt"
-    "go-vsoa/client"
-    "go-vsoa/protocol"
+
+    "gitee.com/sylixos/go-vsoa/client"
+    "gitee.com/sylixos/go-vsoa/protocol"
 )
 
 type RpcLightParam struct {

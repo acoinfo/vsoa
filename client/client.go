@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go-vsoa/protocol"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // ServiceError is an error from server.
@@ -56,10 +57,10 @@ type VsoaClient interface {
 	Connect(network, address string) error
 	// async func for VSOA call
 	Go(mt protocol.MessageType, URL string, serviceMethod protocol.RpcMessageType, param *json.RawMessage, data []byte, done chan *Call) *Call
-	// sync func wait answer
+	// sync func for VSOA call
 	Call(ctx context.Context, servicePath, serviceMethod string, args interface{}, reply interface{}) error
-	// send raw message without any codec
-	SendRaw(ctx context.Context, r *protocol.Message) (map[string]string, []byte, error)
+
+	// Close the client & release the resources
 	Close() error
 	// Return Server URL/ip:port
 	RemoteAddr() string
@@ -68,14 +69,12 @@ type VsoaClient interface {
 	// inject onPublish callback to the URL with father URL
 	Subscribe(URL string, onPublish func(m *protocol.Message)) error
 
-	RegisterServerMessageChan(ch chan<- *protocol.Message)
-	UnregisterServerMessageChan()
-
+	// If server authed this client
 	IsAuthed() bool
+	// If client is closing or not
 	IsClosing() bool
+	// If client is shutdown or not
 	IsShutdown() bool
-
-	GetConn() net.Conn
 }
 
 // Client represents a VSOA client. (For NOW it's only RPC&ServInfo)

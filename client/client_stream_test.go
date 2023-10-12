@@ -3,11 +3,12 @@ package client
 import (
 	"bytes"
 	"flag"
-	"go-vsoa/protocol"
-	"go-vsoa/server"
 	"io"
 	"testing"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
+	"gitee.com/sylixos/go-vsoa/server"
 )
 
 var (
@@ -103,7 +104,7 @@ func startStreamServer(t *testing.T) {
 			t.Log("stream server receiveBuf:", receiveBuf.String())
 		}()
 	}
-	s.AddRpcHandler("/read", protocol.RpcMethodGet, h)
+	s.On("/read", protocol.RpcMethodGet, h)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3002")

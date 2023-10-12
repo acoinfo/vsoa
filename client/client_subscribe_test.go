@@ -3,9 +3,10 @@ package client
 import (
 	"encoding/json"
 	"flag"
-	"go-vsoa/protocol"
 	"testing"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 var (
@@ -60,11 +61,26 @@ func TestSub(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	c.UnSubscribe("/p")
+	err = c.UnSubscribe("/p")
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	}
 
 	time.Sleep(2 * time.Second)
 
-	c.Subscribe("/p", cb.getPublishParam)
+	// client don't know if it's quick channel or not
+	err = c.Subscribe("/p", cb.getPublishParam)
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	}
 
 	time.Sleep(2 * time.Second)
 }

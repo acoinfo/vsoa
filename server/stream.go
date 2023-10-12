@@ -3,11 +3,12 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"go-vsoa/protocol"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 type SeverStream struct {
@@ -15,7 +16,11 @@ type SeverStream struct {
 	Ln    net.Listener
 }
 
-func (s *VsoaServer) NewSeverStream(res *protocol.Message) (ss *SeverStream, err error) {
+// NewSeverStream creates a new Stream using tunid in res.
+//
+// It takes a pointer to a Server object, s, and a pointer to a protocol.Message object, res, as parameters.
+// It returns a pointer to a SeverStream object, ss, and an error object, err.
+func (s *Server) NewSeverStream(res *protocol.Message) (ss *SeverStream, err error) {
 	var ln net.Listener
 	var n int
 

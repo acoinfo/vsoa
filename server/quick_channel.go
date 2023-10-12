@@ -3,17 +3,18 @@ package server
 import (
 	"bytes"
 	"errors"
-	"go-vsoa/protocol"
 	"io"
 	"log"
 	"net"
 	"runtime"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // serveQuickListener serves the UDP listener of the VsoaServer.
 //
 // It takes an address string as a parameter and returns an error.
-func (s *VsoaServer) serveQuickListener(address string) (err error) {
+func (s *Server) serveQuickListener(address string) (err error) {
 	qAddrServer := (*net.UDPAddr)(s.ln.Addr().(*net.TCPAddr))
 	s.qln, err = net.ListenUDP("udp", qAddrServer)
 	if err != nil {
@@ -57,7 +58,7 @@ func (s *VsoaServer) serveQuickListener(address string) (err error) {
 //
 // It takes in a req of type *protocol.Message and ClientUid of type uint32.
 // It does not return anything.
-func (s *VsoaServer) processOneQuickRequest(req *protocol.Message, ClientUid uint32) {
+func (s *Server) processOneQuickRequest(req *protocol.Message, ClientUid uint32) {
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 1024)

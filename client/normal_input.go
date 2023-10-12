@@ -3,10 +3,11 @@ package client
 import (
 	"errors"
 	"fmt"
-	"go-vsoa/protocol"
 	"io"
 	"log"
 	"net"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 func (client *Client) input() {

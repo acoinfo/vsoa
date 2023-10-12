@@ -14,10 +14,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go-vsoa/utils"
 	"io"
 	"log"
 	"runtime"
+
+	"gitee.com/sylixos/go-vsoa/utils"
 )
 
 // Internal use in vsoa package

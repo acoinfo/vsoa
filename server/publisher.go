@@ -1,10 +1,11 @@
 package server
 
 import (
-	"go-vsoa/protocol"
 	"log"
 	"net"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // publisher is a method of the VsoaServer struct that sends a publish message to all active clients subscribed to a specific service path at the specified time interval.
@@ -13,7 +14,7 @@ import (
 // - servicePath: a string representing the service path to publish.
 // - timeDriction: a time.Duration value representing the time interval between each publish message.
 // - pubs: a function that takes two parameters: a pointer to a protocol.Message and a pointer to another protocol.Message. It is called to initialize the request message before publishing.
-func (s *VsoaServer) publisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
+func (s *Server) publisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
 	req := protocol.NewMessage()
 	pubs(req, nil)
 
@@ -32,7 +33,7 @@ func (s *VsoaServer) publisher(servicePath string, timeDriction time.Duration, p
 }
 
 // Normal channel Publish Message
-func (s *VsoaServer) sendMessage(req *protocol.Message, conn net.Conn) error {
+func (s *Server) sendMessage(req *protocol.Message, conn net.Conn) error {
 	req.SetMessageType(protocol.TypePublish)
 
 	req.SetReply(false)

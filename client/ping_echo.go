@@ -3,9 +3,10 @@ package client
 import (
 	"errors"
 	"fmt"
-	"go-vsoa/protocol"
 	"net"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // pingLoop runs a loop to send ping messages to the server and handle the responses.

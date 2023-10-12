@@ -1,13 +1,14 @@
 package server
 
 import (
-	"go-vsoa/protocol"
 	"log"
 	"net"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
-func (s *VsoaServer) qpublisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
+func (s *Server) qpublisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
 	req := protocol.NewMessage()
 	pubs(req, nil)
 
@@ -26,7 +27,7 @@ func (s *VsoaServer) qpublisher(servicePath string, timeDriction time.Duration, 
 }
 
 // Normal channel Publish Message
-func (s *VsoaServer) qsendMessage(req *protocol.Message, qAddr *net.UDPAddr) error {
+func (s *Server) qsendMessage(req *protocol.Message, qAddr *net.UDPAddr) error {
 	req.SetMessageType(protocol.TypePublish)
 
 	req.SetReply(false)

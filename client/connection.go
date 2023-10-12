@@ -5,13 +5,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"go-vsoa/position"
-	"go-vsoa/protocol"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/position"
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 var (

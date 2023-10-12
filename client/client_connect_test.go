@@ -3,13 +3,14 @@ package client
 import (
 	"encoding/json"
 	"flag"
-	"go-vsoa/position"
-	"go-vsoa/protocol"
-	"go-vsoa/server"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/position"
+	"gitee.com/sylixos/go-vsoa/protocol"
+	"gitee.com/sylixos/go-vsoa/server"
 )
 
 var (
@@ -139,23 +140,23 @@ func startServer() {
 		res.Param = req.Param
 		res.Data = req.Data
 	}
-	s.AddRpcHandler("/a/b/c", protocol.RpcMethodGet, h)
+	s.On("/a/b/c", protocol.RpcMethodGet, h)
 
 	hs := func(req, res *protocol.Message) {
 		res.Param = req.Param
 		res.Data = req.Data
 	}
-	s.AddRpcHandler("/a/b/c", protocol.RpcMethodSet, hs)
+	s.On("/a/b/c", protocol.RpcMethodSet, hs)
 
 	pubs := func(req, _ *protocol.Message) {
 		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing"}`).MarshalJSON()
 	}
-	s.AddPublisher("/p", 1*time.Second, pubs)
+	s.Publish("/p", 1*time.Second, pubs)
 
 	qpubs := func(req, _ *protocol.Message) {
 		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-Publishing-Quick"}`).MarshalJSON()
 	}
-	s.AddPublisher("/p/q", 1*time.Second, qpubs)
+	s.Publish("/p/q", 1*time.Second, qpubs)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")

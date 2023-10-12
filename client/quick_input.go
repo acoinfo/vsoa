@@ -1,7 +1,7 @@
 package client
 
 import (
-	"go-vsoa/protocol"
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 // quick channel will only receive server's publish in Quick channel

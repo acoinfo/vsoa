@@ -2,9 +2,10 @@ package client
 
 import (
 	"flag"
-	"go-vsoa/protocol"
 	"testing"
 	"time"
+
+	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
 var (
