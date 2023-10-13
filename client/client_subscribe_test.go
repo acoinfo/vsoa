@@ -59,7 +59,7 @@ func TestSub(t *testing.T) {
 		}
 	}
 
-	err = c.Subscribe("/p/d/", cb.getQPublishParam)
+	err = c.Subscribe("/p/d/", cb.getPublishParam)
 	if err != nil {
 		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
 			t.Log("Pass: Invalid URL")

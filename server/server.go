@@ -55,10 +55,12 @@ type VsoaServer interface {
 		handler func(*protocol.Message, *protocol.Message)) (err error)
 	// Publish adds a publisher to the VsoaServer.
 	Publish(servicePath string,
-		handler func(*protocol.Message, *protocol.Message)) (err error)
+		timeDriction time.Duration,
+		pubs func(*protocol.Message, *protocol.Message)) (err error)
 	// QuickPublish adds a quick channel publisher to the server.
 	QuickPublish(servicePath string,
-		handler func(*protocol.Message, *protocol.Message)) (err error)
+		timeDriction time.Duration,
+		pubs func(*protocol.Message, *protocol.Message)) (err error)
 	// NewSeverStream creates a new Stream using tunid in res.
 	NewSeverStream(res *protocol.Message) (ss *SeverStream, err error)
 }
@@ -119,6 +121,9 @@ type Server struct {
 
 // NewServer returns a server.
 func NewServer(name string, so Option) *Server {
+	if name == "" {
+		name = "default GO-VSOA server name"
+	}
 	s := &Server{
 		Name:   name,
 		option: so,
