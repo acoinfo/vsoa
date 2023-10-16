@@ -11,16 +11,16 @@ import (
 	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
-type SeverStream struct {
+type ServerStream struct {
 	Tunid uint16
 	Ln    net.Listener
 }
 
-// NewSeverStream creates a new Stream using tunid in res.
+// NewServerStream creates a new Stream using tunid in res.
 //
 // It takes a pointer to a Server object, s, and a pointer to a protocol.Message object, res, as parameters.
-// It returns a pointer to a SeverStream object, ss, and an error object, err.
-func (s *Server) NewSeverStream(res *protocol.Message) (ss *SeverStream, err error) {
+// It returns a pointer to a ServerStream object, ss, and an error object, err.
+func (s *Server) NewServerStream(res *protocol.Message) (ss *ServerStream, err error) {
 	var ln net.Listener
 	var n int
 
@@ -44,13 +44,13 @@ func (s *Server) NewSeverStream(res *protocol.Message) (ss *SeverStream, err err
 	res.SetTunId(tunid)
 	res.SetValidTunid()
 
-	return &SeverStream{
+	return &ServerStream{
 		Tunid: tunid,
 		Ln:    ln,
 	}, nil
 }
 
-func (ss *SeverStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
+func (ss *ServerStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
 	var tempDelay time.Duration
 
 	conn, e := ss.Ln.Accept()
@@ -74,10 +74,10 @@ func (ss *SeverStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
 	}
 }
 
-func (ss *SeverStream) serveConnPush(conn net.Conn, pushBuf *bytes.Buffer) {
+func (ss *ServerStream) serveConnPush(conn net.Conn, pushBuf *bytes.Buffer) {
 	io.Copy(conn, pushBuf)
 }
 
-func (ss *SeverStream) serveConnReceive(conn net.Conn, receiveBuf *bytes.Buffer) {
+func (ss *ServerStream) serveConnReceive(conn net.Conn, receiveBuf *bytes.Buffer) {
 	io.Copy(receiveBuf, conn)
 }

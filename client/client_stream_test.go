@@ -96,7 +96,7 @@ func startStreamServer(t *testing.T) {
 
 	// Register URL
 	h := func(req, res *protocol.Message) {
-		ss, _ := s.NewSeverStream(res)
+		ss, _ := s.NewServerStream(res)
 		pushBuf := bytes.NewBufferString("12345678909876543212345678910")
 		receiveBuf := bytes.NewBufferString("")
 		go func() {

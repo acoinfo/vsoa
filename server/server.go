@@ -47,11 +47,11 @@ type VsoaServer interface {
 	// On adds an RPC handler to the VsoaServer.
 	On(servicePath string, serviceMethod protocol.RpcMessageType,
 		handler func(*protocol.Message, *protocol.Message)) (err error)
-	// OnDatagarm adds a DATAGRAME handler to the VsoaServer.
-	OnDatagarm(servicePath string,
+	// OnDatagram adds a DATAGRAME handler to the VsoaServer.
+	OnDatagram(servicePath string,
 		handler func(*protocol.Message, *protocol.Message)) (err error)
-	// OnDatagarm adds a default DATAGRAME handler to the VsoaServer.
-	OnDatagarmDefault(
+	// OnDatagram adds a default DATAGRAME handler to the VsoaServer.
+	OnDatagramDefault(
 		handler func(*protocol.Message, *protocol.Message)) (err error)
 	// Publish adds a publisher to the VsoaServer.
 	Publish(servicePath string,
@@ -61,8 +61,8 @@ type VsoaServer interface {
 	QuickPublish(servicePath string,
 		timeDriction time.Duration,
 		pubs func(*protocol.Message, *protocol.Message)) (err error)
-	// NewSeverStream creates a new Stream using tunid in res.
-	NewSeverStream(res *protocol.Message) (ss *SeverStream, err error)
+	// NewServerStream creates a new Stream using tunid in res.
+	NewServerStream(res *protocol.Message) (ss *ServerStream, err error)
 }
 
 // VSOA Server need to konw the client infos
@@ -578,10 +578,10 @@ func (s *Server) On(servicePath string, serviceMethod protocol.RpcMessageType, h
 	return nil
 }
 
-// OnDatagarm adds a DATAGRAME handler to the VsoaServer.
+// OnDatagram adds a DATAGRAME handler to the VsoaServer.
 //
 // It takes in the servicePath string and the handler function, and returns an error.
-func (s *Server) OnDatagarm(servicePath string, handler func(*protocol.Message, *protocol.Message)) (err error) {
+func (s *Server) OnDatagram(servicePath string, handler func(*protocol.Message, *protocol.Message)) (err error) {
 	if handler == nil {
 		return ErrNilHandler
 	}
@@ -595,12 +595,12 @@ func (s *Server) OnDatagarm(servicePath string, handler func(*protocol.Message, 
 	return nil
 }
 
-// OnDatagarmDefault adds a default DATAGRAME handler to the VsoaServer.
+// OnDatagramDefault adds a default DATAGRAME handler to the VsoaServer.
 //
 // The handler parameter is a function that takes two parameters: a pointer to a protocol.Message
 // and a pointer to another protocol.Message. It is responsible for handling the ondata event.
 // This function does not return anything.
-func (s *Server) OnDatagarmDefault(handler func(*protocol.Message, *protocol.Message)) (err error) {
+func (s *Server) OnDatagramDefault(handler func(*protocol.Message, *protocol.Message)) (err error) {
 	if handler == nil {
 		return ErrNilHandler
 	}

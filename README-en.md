@@ -15,7 +15,7 @@ GO-VSOA is a development library for VSOA (Vision Service Oriented Architecture)
 ### 2023/10/08 V1.0.1
 
 - Release V1.0.1 ver  
-- Support RPC/SUB/UNSUB/PUB/DATAGARM  
+- Support RPC/SUB/UNSUB/PUB/DATAGRAM  
 - Not Supoort QoS  
 
 ## Currently Supported Platforms

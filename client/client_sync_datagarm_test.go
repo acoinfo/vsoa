@@ -101,17 +101,17 @@ func startDatagramServer(t *testing.T) {
 		res.Param = req.Param
 		t.Log("/datagram Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.OnDatagarm("/datagram", h)
+	s.OnDatagram("/datagram", h)
 	qh := func(req, res *protocol.Message) {
 		res.Param = req.Param
 		t.Log("/datagramQuick Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.OnDatagarm("/datagramQuick", qh)
+	s.OnDatagram("/datagramQuick", qh)
 	dh := func(req, res *protocol.Message) {
 		res.Param = req.Param
 		t.Log("Default Handler:", "URL", string(req.URL), "Param:", string(res.Param))
 	}
-	s.OnDatagarmDefault(dh)
+	s.OnDatagramDefault(dh)
 
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")
