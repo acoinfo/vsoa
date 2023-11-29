@@ -16,12 +16,13 @@ import (
 // - pubs: a function that takes two parameters: a pointer to a protocol.Message and a pointer to another protocol.Message. It is called to initialize the request message before publishing.
 func (s *Server) publisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
 	req := protocol.NewMessage()
-	pubs(req, nil)
 
 	ticker := time.NewTicker(timeDriction)
 	defer ticker.Stop()
 
 	for range ticker.C {
+		pubs(req, nil)
+
 		for _, client := range s.activeClients {
 			if client.Subscribes[servicePath] {
 				//PUT URL into req otherwise client will not receive this publish
