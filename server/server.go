@@ -44,6 +44,8 @@ type VsoaServer interface {
 	Serve(address string) (err error)
 	// Close closes VSOA server.
 	Close() (err error)
+	// Get the number of connected clients.
+	Count() int
 	// On adds an RPC handler to the VsoaServer.
 	On(servicePath string, serviceMethod protocol.RpcMessageType,
 		handler func(*protocol.Message, *protocol.Message)) (err error)
@@ -189,6 +191,24 @@ func (s *Server) Close() (err error) {
 	return nil
 }
 
+func (s *Server) Count() int {
+	if !s.isStarted.Load() || s.IsShutdown() {
+		return 0
+	}
+
+	count := 0
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for cuid := range s.activeClients {
+		if s.activeClients[cuid].Authed {
+			count++
+		}
+	}
+	return count
+}
+
 // serveListener accepts incoming connections on the Listener ln,
 // creating a new service goroutine for each.
 // The service goroutines read requests and then call services to reply to them.
@@ -330,7 +350,6 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				log.Printf("Vsoa client has closed this connection: %s", conn.RemoteAddr().String())
-
 			}
 
 			if s.HandleServiceError != nil {
