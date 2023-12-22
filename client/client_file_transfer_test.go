@@ -81,10 +81,10 @@ func TestFileTransfer(t *testing.T) {
 					// EOF means stream cloesed
 					if err == io.EOF {
 						streamDone <- err
-						break
+						return
 					} else {
 						streamDone <- err
-						break
+						return
 					}
 				}
 				receiveBuf.Write(buf[:n])
@@ -95,10 +95,10 @@ func TestFileTransfer(t *testing.T) {
 					break
 				}
 			}
-			cs.conn.Close()
 
 			if md5.Sum(orginalFile) != md5.Sum(receiveBuf.Bytes()) {
 				streamDone <- errors.New("Stream file md5 not match!")
+				return
 			}
 
 			t.Log("stream download file done successfully!")
@@ -107,11 +107,11 @@ func TestFileTransfer(t *testing.T) {
 	}
 
 	d := <-streamDone
+	cs.conn.Close()
+
 	if d != nil {
 		t.Fatal(d)
 	}
-
-	cs.conn.Close()
 }
 
 func startFileStreamServer(t *testing.T) {
