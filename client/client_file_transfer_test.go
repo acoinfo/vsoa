@@ -114,6 +114,73 @@ func TestFileTransfer(t *testing.T) {
 	}
 }
 
+func TestFileTransferIoCopy(t *testing.T) {
+	startFileStreamServer(t)
+	flag.Parse()
+
+	// Do this to make sure the server is ready on slow machine
+	time.Sleep(50 * time.Millisecond)
+
+	var StreamTunID uint16
+
+	clientOption := Option{
+		Password: "123456",
+	}
+
+	c := NewClient(clientOption)
+	_, err := c.Connect("vsoa", *file_transfer_addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	req := protocol.NewMessage()
+	DstParam := new(FileTransferTestParam)
+
+	reply, err := c.Call("/download", protocol.TypeRPC, protocol.RpcMethodGet, req)
+	if err != nil {
+		if err == strErr(protocol.StatusText(protocol.StatusInvalidUrl)) {
+			t.Log("Pass: Invalid URL")
+		} else {
+			t.Fatal(err)
+		}
+	} else {
+		StreamTunID = reply.TunID()
+		t.Log("Seq:", reply.SeqNo(), "Stream TunID:", StreamTunID)
+
+		json.Unmarshal(reply.Param, DstParam)
+		t.Log("FileName:", DstParam.FileName, "FileSize:", DstParam.FileSize)
+	}
+
+	receiveBuf := bytes.NewBufferString("")
+
+	streamDone := make(chan error)
+
+	cs, err := c.NewClientStream(StreamTunID)
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		go func() {
+			io.CopyN(receiveBuf, cs, int64(DstParam.FileSize))
+
+			if md5.Sum(orginalFile) != md5.Sum(receiveBuf.Bytes()) {
+				streamDone <- errors.New("Stream file md5 not match!")
+				return
+			}
+
+			t.Log("stream download file done successfully!")
+			streamDone <- nil
+		}()
+	}
+
+	d := <-streamDone
+	cs.conn.Close()
+
+	if d != nil {
+		t.Fatal(d)
+	}
+}
+
 func startFileStreamServer(t *testing.T) {
 	// Init golang server
 	serverOption := server.Option{
