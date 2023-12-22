@@ -65,6 +65,18 @@ iry:
   MOVW     R3, ret+16(FP)
   RET
 
+TEXT    ·in(SB), NOSPLIT, $0
+  MOVB     in+1(FP), R0
+  MOVW     $0xfe, R1
+  CMP      R1, R0
+  BEQ      iny
+  MOVW     $0x00, ret+16(FP)  
+  RET
+iny:
+  MOVW     $0x01, R3
+  MOVW     R3, ret+16(FP)
+  RET
+
 TEXT    ·ipe(SB), NOSPLIT, $0
   MOVB     ipe+1(FP), R0
   MOVW     $0xff, R1

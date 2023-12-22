@@ -24,7 +24,7 @@ type ServInfoReqParam struct {
 	Password     string `json:"passwd,omitempty"`
 	PingInterval int    `json:"pingInterval,omitempty"`
 	PingTimeout  int    `json:"pingTimeout,omitempty"`
-	PingLost     uint   `json:"pingLost,omitempty"`
+	PingLost     int32  `json:"pingLost,omitempty"`
 }
 
 type ServInfoResParam struct {

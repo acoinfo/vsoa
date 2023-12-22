@@ -20,7 +20,9 @@ const (
 	TypePublish                        //VSOA Publish data to subscriber
 	TypeDatagram                       //VSOA Datagram without resp
 	TypeQosSetup                       //Setup Qos for VSOA
-	TypePingEcho    MessageType = 0xff //VSOA internel ping call
+
+	TypeNoop     MessageType = 0xfe //VSOA internel no operation call
+	TypePingEcho MessageType = 0xff //VSOA internel ping call
 )
 
 // MethodText returns a text for the VSOA conn type code. It returns the empty
@@ -41,6 +43,8 @@ func TypeText(code MessageType) string {
 		return "TYPE_DATAGRAM"
 	case TypeQosSetup:
 		return "TYPE_QOS_SETUP"
+	case TypeNoop:
+		return "TYPE_NOOP"
 	case TypePingEcho:
 		return "TYPE_PING"
 	default:

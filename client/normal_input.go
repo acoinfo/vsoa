@@ -94,6 +94,7 @@ func (client *Client) input() {
 		case res.IsPingEcho():
 			fallthrough
 		default:
+			call.Error = nil
 			call.Reply = res
 			call.done()
 		}
@@ -108,12 +109,8 @@ func (client *Client) input() {
 		client.handleServerRequest(req)
 	}
 
-	client.mutex.Lock()
-	client.Conn.Close()
-	//We need to cloes quick channel too.
-	client.QConn.Close()
-	client.shutdown = true
-	closing := client.closing
+	err = client.Close()
+
 	if e, ok := err.(*net.OpError); ok {
 		if e.Addr != nil || e.Err != nil {
 			err = fmt.Errorf("net.OpError: %s", e.Err.Error())
@@ -123,7 +120,7 @@ func (client *Client) input() {
 
 	}
 	if err == io.EOF {
-		if closing {
+		if client.closing {
 			err = ErrShutdown
 		} else {
 			// If server aggressive close the client conn.
@@ -136,9 +133,7 @@ func (client *Client) input() {
 		call.done()
 	}
 
-	client.mutex.Unlock()
-
-	if err != nil && !closing {
+	if err != nil && !client.closing && !client.shutdown {
 		log.Printf("VSOA: client protocol error: %v", err)
 	}
 }

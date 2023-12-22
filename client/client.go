@@ -97,13 +97,15 @@ type Client struct {
 	// used for server publish
 	SubscribeList map[string]func(m *protocol.Message)
 
-	mutex            sync.Mutex // protects following
+	mutex sync.Mutex // protects following
+
+	noseq            uint32
 	seq              uint32
 	pending          map[uint32]*Call
-	authed           bool // if server authed this client
-	closing          bool // user has called Close
-	shutdown         bool // server has told us to stop
-	pingTimeoutCount uint // for server ping echo logic
+	authed           bool  // if server authed this client
+	closing          bool  // user has called Close
+	shutdown         bool  // server has told us to stop
+	pingTimeoutCount int32 // for server ping echo logic
 
 	ServerMessageChan chan<- *protocol.Message
 }
@@ -136,9 +138,10 @@ func (c *Client) GetUid() uint32 {
 // Option contains all options for creating clients.
 type Option struct {
 	Password       string
-	PingInterval   int
+	PingInterval   int //second
 	PingTimeout    int
-	PingLost       uint
+	PingLost       int32
+	PingTurbo      int //millisecond
 	ConnectTimeout time.Duration
 	// TLSConfig for tcp and quic
 	TLSConfig *tls.Config
@@ -240,6 +243,8 @@ func (client *Client) Go(URL string, mt protocol.MessageType, flags any, req *pr
 		go client.sendSubscribe(call, true)
 	case protocol.TypeUnsubscribe:
 		go client.sendSubscribe(call, false)
+	case protocol.TypeNoop:
+		go client.sendNoop(call)
 	case protocol.TypePingEcho:
 		go client.sendPingEcho(call)
 	default:
@@ -497,7 +502,6 @@ func (client *Client) Close() error {
 	}
 
 	client.closing = true
-	client.mutex.Unlock()
 
 	if client.QConn != nil {
 		client.QConn.Close()
@@ -505,6 +509,11 @@ func (client *Client) Close() error {
 	if client.Conn != nil {
 		err = client.QConn.Close()
 	}
+
+	client.closing = false
+	client.shutdown = true
+
+	client.mutex.Unlock()
 
 	return err
 }

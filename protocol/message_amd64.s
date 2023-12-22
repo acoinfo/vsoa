@@ -60,6 +60,17 @@ irn:
   MOVW    $0x00, r+16(FP)
   RET
 
+TEXT    ·in(SB), NOSPLIT, $0
+  MOVB    in+1(FP), AX
+  MOVW    $0xfe, BX
+  CMPB    AX, BX
+  JNE     inn
+  MOVW    $0x01, r+16(FP)
+  RET
+inn:
+  MOVW    $0x00, r+16(FP)
+  RET
+
 TEXT    ·ipe(SB), NOSPLIT, $0
   MOVB    ipe+1(FP), AX
   MOVW    $0xff, BX

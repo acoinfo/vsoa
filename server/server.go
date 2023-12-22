@@ -176,7 +176,6 @@ func (s *Server) Close() (err error) {
 
 	for cuid := range s.activeClients {
 		s.closeConn(cuid)
-		delete(s.activeClients, cuid)
 	}
 
 	s.mu.Lock()
@@ -296,9 +295,6 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		if s.IsShutdown() {
 			<-s.doneChan
 		}
-
-		// close TCP&UDPconn
-		s.closeConn(ClientUid)
 	}()
 
 	if tlsConn, ok := conn.(*tls.Conn); ok {
@@ -343,7 +339,7 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 			return
 		}
 
-		if !req.IsPingEcho() && !req.IsServInfo() {
+		if !req.IsPingEcho() && !req.IsNoop() && !req.IsServInfo() {
 			if !s.activeClients[ClientUid].Authed {
 				// Close unauthed client
 				s.closeConn(ClientUid)
@@ -389,6 +385,11 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 	}
 
 	res.SetReply(true)
+
+	if req.IsNoop() {
+		res.Reset()
+		return
+	}
 
 	if req.IsPingEcho() {
 		s.sendResponse(res, conn)

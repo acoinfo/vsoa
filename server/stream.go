@@ -54,6 +54,9 @@ func (ss *ServerStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
 	var tempDelay time.Duration
 
 	conn, e := ss.Ln.Accept()
+
+	streamDone := make(chan int)
+
 	if e != nil {
 		if ne, ok := e.(net.Error); ok && ne.Timeout() {
 			if tempDelay == 0 {
@@ -69,13 +72,20 @@ func (ss *ServerStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
 
 		}
 	} else {
-		go ss.serveConnPush(conn, pushBuf)
+		go func() {
+			ss.serveConnPush(conn, pushBuf)
+			streamDone <- 1
+		}()
 		ss.serveConnReceive(conn, receiveBuf)
 	}
+
+	<-streamDone
+
+	ss.Ln.Close()
 }
 
 func (ss *ServerStream) serveConnPush(conn net.Conn, pushBuf *bytes.Buffer) {
-	io.Copy(conn, pushBuf)
+	io.CopyN(conn, pushBuf, int64(pushBuf.Len()))
 }
 
 func (ss *ServerStream) serveConnReceive(conn net.Conn, receiveBuf *bytes.Buffer) {

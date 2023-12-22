@@ -72,7 +72,7 @@ func TestStream(t *testing.T) {
 				t.Log("stream receiveBuf:", receiveBuf.String())
 
 				// Push data back to stream server
-				cs.Write(receiveBuf.Bytes())
+				cs.Write(receiveBuf)
 
 				//In this test, we just receive little data from server, so we just stop here
 				goto STOP
@@ -85,6 +85,8 @@ func TestStream(t *testing.T) {
 
 	// don't close too quick before server handle the Call
 	time.Sleep(5 * time.Millisecond)
+
+	cs.conn.Close()
 }
 
 func startStreamServer(t *testing.T) {

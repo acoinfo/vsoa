@@ -37,6 +37,17 @@ func (client *Client) Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerIn
 
 	client.addr = address_or_URL
 
+	// check client options is valid
+	if client.option.PingTurbo != 0 {
+		if client.option.PingTurbo < 25 || client.option.PingTurbo > 1000 {
+			return "", errors.New("invalid PingTurbo value should be between 25 and 1000 or 0")
+		} else if client.option.PingInterval == 0 {
+			return "", errors.New("PingInterval must be set with PingTurbo")
+		} else if (client.option.PingInterval*1000)%client.option.PingTurbo != 0 {
+			return "", errors.New("PingInterval must be multiple of PingTurbo")
+		}
+	}
+
 	switch vsoa_or_VSOA_URL {
 	case "VSOA_URL":
 		//TODO: If position server change address, need to update all relevant connections

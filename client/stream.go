@@ -1,7 +1,9 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -51,6 +53,6 @@ func (cs *ClientStream) Read(buf []byte) (int, error) {
 	return cs.conn.Read(buf)
 }
 
-func (cs *ClientStream) Write(buf []byte) (int, error) {
-	return cs.conn.Write(buf)
+func (cs *ClientStream) Write(writeBuf *bytes.Buffer) {
+	io.CopyN(cs.conn, writeBuf, int64(writeBuf.Len()))
 }

@@ -116,6 +116,13 @@ func (h Header) IsRPC() bool {
 	return ir(h)
 }
 
+func in(h Header) (ret bool)
+
+// IsPingEcho returns whether the message is ping echo message.
+func (h Header) IsNoop() bool {
+	return in(h)
+}
+
 func ipe(h Header) (ret bool)
 
 // IsPingEcho returns whether the message is ping echo message.
