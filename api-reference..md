@@ -591,7 +591,7 @@ Slot to the specified event (URL), when the server sends the corresponding event
 UnSlot the specified event.
 If UnSlot's URL ends with `/`, it will UnSlot all slots' URLs.
 
-PATH|UnSubscribe match rules
+PATH|UnSlot match rules
 :--|:--
 `"/"`|Uncatch all publish message.
 `"/a/b/c"`|Only Uncatch `"/a/b/c"` publish message.
