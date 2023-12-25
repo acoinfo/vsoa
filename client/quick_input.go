@@ -24,18 +24,21 @@ func (client *Client) qinput() {
 				if act != nil {
 					act(res)
 				}
+				client.regulatorUpdator(res)
 				continue
 			}
 			if act, ok := client.SubscribeList[string(res.URL)+"/"]; ok {
 				if act != nil {
 					act(res)
 				}
+				client.regulatorUpdator(res)
 				continue
 			}
 			if act, ok := client.SubscribeList[string(res.URL[:len(res.URL)-1])]; ok && strings.HasSuffix(string(res.URL), "/") {
 				if act != nil {
 					act(res)
 				}
+				client.regulatorUpdator(res)
 				continue
 			}
 			routelen := 0
@@ -55,6 +58,7 @@ func (client *Client) qinput() {
 			if savedAct != nil {
 				savedAct(res)
 			}
+			client.regulatorUpdator(res)
 			continue
 		default:
 			continue

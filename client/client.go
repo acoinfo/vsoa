@@ -42,6 +42,9 @@ var (
 	ErrUnAuthed         = errors.New("client is not Authed")
 	ErrUnsupportedCodec = errors.New("unsupported codec")
 	ErrPingEcho         = errors.New("PingEcho set error")
+	ErrStartRegulator   = errors.New("regulator already started")
+	ErrRegulatorTooFast = errors.New("regulator interval should be more than 1ms")
+	ErrStopRegulator    = errors.New("regulator already stopped")
 )
 
 const (
@@ -73,6 +76,23 @@ type VsoaClient interface {
 	// delete onPublish callback to the URL with father URL
 	UnSubscribe(URL string) error
 
+	// Regulator is used for server publish;
+	// This init the slotList for server publish in lower sampling.
+	StartRegulator(interval time.Duration) error
+
+	// Regulator is used for server publish;
+	// This init the slotList for server publish in lower sampling.
+	StopRegulator() error
+
+	// Slot is used for server publish;
+	// this can be used after Subscribe, when you wants to handle server publish in lower sampling.
+	// in this case put Subscribe callback be NoopPublish.
+	Slot(URL string, onPublish func(m *protocol.Message)) error
+
+	// UnSlot is used for server publish;
+	// this is called automatically after UnSubscribe
+	UnSlot(URL string) error
+
 	// If server authed this client
 	IsAuthed() bool
 	// If client is closing or not
@@ -97,6 +117,10 @@ type Client struct {
 	// used for server publish
 	SubscribeList map[string]func(m *protocol.Message)
 
+	// used for server publish in lower sampling
+	slotList  map[string]*clientSlot
+	regulator regulator
+
 	mutex sync.Mutex // protects following
 
 	noseq            uint32
@@ -106,6 +130,7 @@ type Client struct {
 	closing          bool  // user has called Close
 	shutdown         bool  // server has told us to stop
 	pingTimeoutCount int32 // for server ping echo logic
+	hasRegulator     bool  // for checking regulator is active
 
 	ServerMessageChan chan<- *protocol.Message
 }

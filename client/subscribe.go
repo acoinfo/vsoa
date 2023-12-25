@@ -50,6 +50,11 @@ func (client *Client) UnSubscribe(URL string) error {
 		return err
 	}
 
+	err = client.UnSlot(URL)
+	if err != nil {
+		log.Println(err)
+	}
+
 	if client.SubscribeList == nil {
 		// Already unSubscribe
 		return nil

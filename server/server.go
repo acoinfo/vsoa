@@ -191,12 +191,12 @@ func (s *Server) Close() (err error) {
 	return nil
 }
 
-func (s *Server) Count() int {
+func (s *Server) Count() (count int) {
 	if !s.isStarted.Load() || s.IsShutdown() {
 		return 0
 	}
 
-	count := 0
+	count = 0
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

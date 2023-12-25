@@ -55,6 +55,7 @@ The following shows `vsoa` package APIs available.
 server.NewServer||
 s.Serve||
 s.Close||
+s.Count||
 s.On|●|●
 s.OnDatagram|●|●
 s.OnDatagramDefault|●|●
@@ -69,6 +70,10 @@ c.Close||
 c.RemoteAddr||
 c.Subscribe||
 c.UnSubscribe||
+c.StartRegulator||
+c.StopRegulator||
+c.Slot||
+c.UnSlot||
 c.NewClientStream||
 c.IsAuthed||
 c.IsClosing||
@@ -115,6 +120,12 @@ The VSOA Server Struct is responsible for the entire lifecycle of go-vsoa. It's 
 + Returns: `err` *{error}* if `err == nil` means success.  
 
 Close VSOA server.
+
+#### **Count() (count int)**
+
++ Returns: `count` *{int}* Those without successful password verification will also be counted.  
+
+Get the number of connected clients.
 
 #### **Serve(address string) (err error)**
 
@@ -539,6 +550,46 @@ PATH|Subscribe match rules
 
 Unsubscribe the specified event.
 If Unsubscribe's URL ends with `/`, it will Unsubscribe all sub URLs.
+> **This API calls UnSlot automatically**
+
+PATH|UnSubscribe match rules
+:--|:--
+`"/"`|Uncatch all publish message.
+`"/a/b/c"`|Only Uncatch `"/a/b/c"` publish message.
+`"/a/b/c/"`|Uncatch `"/a/b/c"` and `"/a/b/c/..."` all publish message.
+
+#### **StartRegulator(interval time.Duration) error**
+
++ `interval` *{time.Duration}* should be greater than 1ms.
++ Returns: *{error}* if there is no error it should be `nil`.  
+
+VSOA regulator provides the function of changing the speed of client subscription data. For example, the server publish period is 100ms, and the regulator can slow down the speed to receive once every 1000ms.
+
+One client only allows have one regulator in lifetime. User can change interval by calling `StopRegulator` than `StartRegulator` with new interval.
+
+#### **StopRegulator() error**
+
++ Returns: *{error}* if there is no error it should be `nil`.  
+
+Stop VSOA regulator. The regulator can be restart by calling `StartRegulator` API again.
+
+#### **Slot(URL string, onPublish func(m *protocol.Message)) error**
+
++ `URL` *{string}* should be publishPath.  
++ `onPublish` *{func(\*protocol.Message)}* callback handler.  
++ Returns: *{error}* if there is no error it should be `nil`.  
+
+Slot to the specified event (URL), when the server sends the corresponding event, the Client can receive the event in regulator sampling interval.
+
+`url` indicates the event, VSOA event matching is prefix matching, for example, when the client subscribes to the `'/a/b/'` event, then the `'/a/b'` or `'/a/b/c'` event can be received.
+
+#### **UnSlot(URL string) error**
+
++ `URL` *{string}* should be publishPath.  
++ Returns: *{error}* if there is no error it should be `nil`.  
+
+UnSlot the specified event.
+If UnSlot's URL ends with `/`, it will UnSlot all slots' URLs.
 
 PATH|UnSubscribe match rules
 :--|:--
