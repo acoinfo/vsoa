@@ -6,6 +6,13 @@ GO-VSOA is a development library for VSOA (Vision Service Oriented Architecture)
 
 ## ChangeLog
 
+### 2023/12/25 V1.0.4
+
+- Happy Christmas Day!  
+- Server add Count API  
+- Better stream test example with `client_file_transfer_test.go`  
+- Add Client NEW Feature: Regulator  
+
 ### 2023/10/12 V1.0.3
 
 - Change Server API!  
@@ -58,7 +65,7 @@ go env -w GO111MODULE=on
 ```
 
 Download this SDK to the src/ folder in GOPATH.
-Rename the go-vsoa folder to go-vsoa@v1.0.3.
+Rename the go-vsoa folder to go-vsoa@v1.0.4.
 Create two folders, `go-vsoa-server` and `go-vsoa-client`, in the src folder for the client and server, respectively.
 Go into each folder and save the following as go.mod.
 
@@ -69,9 +76,9 @@ module go-vsoa-server
 
 go 1.20
 
-require gitee.com/sylixos/go-vsoa v1.0.3
+require gitee.com/sylixos/go-vsoa v1.0.4
 
-replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
+replace gitee.com/sylixos/go-vsoa v1.0.4 => ../go-vsoa@v1.0.4
 ```
 
 For the `go-vsoa-client` folder:
@@ -81,9 +88,9 @@ module go-vsoa-client
 
 go 1.20
 
-require gitee.com/sylixos/go-vsoa v1.0.3
+require gitee.com/sylixos/go-vsoa v1.0.4
 
-replace gitee.com/sylixos/go-vsoa v1.0.3 => ../go-vsoa@v1.0.3
+replace gitee.com/sylixos/go-vsoa v1.0.4 => ../go-vsoa@v1.0.4
 ```
 
 ### Writing the Server
