@@ -88,7 +88,7 @@ func (client *Client) Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerIn
 
 		qconn, err = newQuickConn(client, client.addr)
 		{
-			if err == nil && conn != nil {
+			if err == nil && qconn != nil {
 				client.QConn = qconn
 				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
 				go client.qinput()
@@ -195,7 +195,7 @@ func (client *Client) reConnect(network string) (err error) {
 
 		qconn, err = newQuickConn(client, client.addr)
 		{
-			if err == nil && conn != nil {
+			if err == nil && qconn != nil {
 				client.QConn = qconn
 				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
 				go client.qinput()
