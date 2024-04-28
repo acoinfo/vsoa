@@ -532,7 +532,7 @@ func (client *Client) Close() error {
 		client.QConn.Close()
 	}
 	if client.Conn != nil {
-		err = client.QConn.Close()
+		err = client.Conn.Close()
 	}
 
 	client.closing = false
