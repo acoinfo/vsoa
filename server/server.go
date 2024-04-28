@@ -46,6 +46,8 @@ type VsoaServer interface {
 	Close() (err error)
 	// Get the number of connected clients.
 	Count() int
+	// Set on client funcs when client connect on server.
+	OnClient(handler func(connect bool) (authed bool, err error))
 	// On adds an RPC handler to the VsoaServer.
 	On(servicePath string, serviceMethod protocol.RpcMessageType,
 		handler func(*protocol.Message, *protocol.Message)) (err error)
@@ -77,6 +79,7 @@ type client struct {
 	QAddr          *net.UDPAddr
 	beforeServInfo bool
 	Authed         bool
+	Active         bool
 	Subscribes     map[string]bool // key: URL, value: If Subs
 }
 
@@ -96,8 +99,8 @@ type Server struct {
 	routerMapMu sync.RWMutex
 	routeMap    map[string]Handler
 
-	mu            sync.RWMutex
-	activeClients map[uint32]*client
+	mu      sync.RWMutex
+	clients map[uint32]*client
 	// When QuickChannel get RemoteAddr we need to use it to check if we have the activeClient
 	quickChannel map[string]uint32
 	clientsCount atomic.Uint32
@@ -114,7 +117,12 @@ type Server struct {
 	handlerMsgNum int32
 
 	// HandleServiceError is used to get all service errors. You can use it write logs or others.
-	HandleServiceError func(error)
+	// This can be use to handler client close event.
+	HandleServiceError func(clientUid uint32, err error)
+
+	// HandleOnClient is used to do things if you want to do when client connect and active.
+	// the return value `authed` is to make pubs to or not to goto the client.
+	HandleOnClient func(clientUid uint32) (authed bool, err error)
 
 	// ServerErrorFunc is a customized error handlers and you can use it to return customized error strings to clients.
 	// If not set, it use err.Error()
@@ -130,12 +138,12 @@ func NewServer(name string, so Option) *Server {
 		Name:   name,
 		option: so,
 		// this can cause server close connection
-		readTimeout:   DefaultTimeout,
-		writeTimeout:  DefaultTimeout,
-		quickChannel:  make(map[string]uint32),
-		activeClients: make(map[uint32]*client),
-		doneChan:      make(chan struct{}),
-		routeMap:      make(map[string]Handler),
+		readTimeout:  DefaultTimeout,
+		writeTimeout: DefaultTimeout,
+		quickChannel: make(map[string]uint32),
+		clients:      make(map[uint32]*client),
+		doneChan:     make(chan struct{}),
+		routeMap:     make(map[string]Handler),
 	}
 
 	s.isStarted.Store(false)
@@ -176,7 +184,7 @@ func (s *Server) Close() (err error) {
 		return nil
 	}
 
-	for cuid := range s.activeClients {
+	for cuid := range s.clients {
 		s.closeConn(cuid)
 	}
 
@@ -201,8 +209,8 @@ func (s *Server) Count() (count int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for cuid := range s.activeClients {
-		if s.activeClients[cuid].Authed {
+	for cuid := range s.clients {
+		if s.clients[cuid].Active {
 			count++
 		}
 	}
@@ -249,12 +257,13 @@ func (s *Server) serveListener(ln net.Listener) error {
 
 		s.mu.Lock()
 		// We don't know the QuickChannel info yet.
-		s.activeClients[CUid] = &client{
+		s.clients[CUid] = &client{
 			Conn: conn,
 			Uid:  CUid,
 			// until we got ServInfo
 			QAddr:          nil,
 			beforeServInfo: true,
+			Active:         false,
 			Authed:         false,
 		}
 		s.mu.Unlock()
@@ -349,17 +358,19 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		err := req.Decode(r)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				log.Printf("Vsoa client has closed this connection: %s", conn.RemoteAddr().String())
+				if s.HandleServiceError == nil {
+					log.Printf("Vsoa client[%d] has closed this connection: %s", ClientUid, conn.RemoteAddr().String())
+				}
 			}
 
 			if s.HandleServiceError != nil {
-				s.HandleServiceError(err)
+				s.HandleServiceError(ClientUid, err)
 			}
 			return
 		}
 
-		if !req.IsPingEcho() && !req.IsNoop() && !req.IsServInfo() {
-			if !s.activeClients[ClientUid].Authed {
+		if !req.IsServInfo() {
+			if !s.clients[ClientUid].Active {
 				// Close unauthed client
 				s.closeConn(ClientUid)
 				log.Printf("auth failed for conn %s: %v", conn.RemoteAddr().String(), protocol.StatusText(protocol.StatusPassword))
@@ -527,20 +538,20 @@ func (s *Server) servInfoHandler(req *protocol.Message, resp *protocol.Message, 
 	r := new(protocol.ServInfoResParam)
 	r.Info = s.Name
 	s.mu.Lock()
-	s.activeClients[ClientUid].beforeServInfo = false
+	s.clients[ClientUid].beforeServInfo = false
 	s.mu.Unlock()
 	if s.option.Password == "" {
 		s.mu.Lock()
-		s.activeClients[ClientUid].Authed = true
+		s.clients[ClientUid].Active = true
 		// quick channel register
 		if req.TunID() != 0 {
-			qAddr := (*net.UDPAddr)(s.activeClients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
+			qAddr := (*net.UDPAddr)(s.clients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
 			qAddr.Port = int(req.TunID())
 			qString := qAddr.String()
-			s.activeClients[ClientUid].QAddr = (qAddr)
+			s.clients[ClientUid].QAddr = (qAddr)
 			s.quickChannel[(qString)] = ClientUid
 		}
-		s.activeClients[ClientUid].Subscribes = make(map[string]bool)
+		s.clients[ClientUid].Subscribes = make(map[string]bool)
 		s.mu.Unlock()
 		r.NewGoodMessage(protocol.ServInfoResAsString, resp, ClientUid)
 	} else {
@@ -555,23 +566,54 @@ func (s *Server) servInfoHandler(req *protocol.Message, resp *protocol.Message, 
 				return protocol.ErrMessagePasswd
 			} else {
 				s.mu.Lock()
-				s.activeClients[ClientUid].Authed = true
+				s.clients[ClientUid].Active = true
 				// quick channel register
 				if req.TunID() != 0 {
-					qAddr := (*net.UDPAddr)(s.activeClients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
+					qAddr := (*net.UDPAddr)(s.clients[ClientUid].Conn.RemoteAddr().(*net.TCPAddr))
 					qAddr.Port = int(req.TunID())
 					qString := qAddr.String()
-					s.activeClients[ClientUid].QAddr = (qAddr)
+					s.clients[ClientUid].QAddr = (qAddr)
 					s.quickChannel[(qString)] = ClientUid
 				}
-				s.activeClients[ClientUid].Subscribes = make(map[string]bool)
+				s.clients[ClientUid].Subscribes = make(map[string]bool)
 				s.mu.Unlock()
 				r.NewGoodMessage(protocol.ServInfoResAsString, resp, ClientUid)
 			}
 		}
 	}
 
+	s.onClient(ClientUid)
 	// TODO: handle other client options like ping echo seting logic
+	return nil
+}
+
+func (s *Server) OnClient(handler func(clientUid uint32) (authed bool, err error)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.HandleOnClient = handler
+}
+
+func (s *Server) onClient(ClientUid uint32) (err error) {
+	if s.HandleOnClient == nil {
+		s.authClient(ClientUid, s.option.AutoAuth)
+		return defaultOnClientHandler(ClientUid)
+	} else {
+		authed, err := s.HandleOnClient(ClientUid)
+		s.authClient(ClientUid, authed)
+		return err
+	}
+}
+
+func (s *Server) authClient(ClientUid uint32, authed bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.clients[ClientUid].Authed = authed
+}
+
+func defaultOnClientHandler(clientUid uint32) (err error) {
+	log.Printf("Vsoa client[%d] active!", clientUid)
 	return nil
 }
 
@@ -694,9 +736,9 @@ func (s *Server) subs(req *protocol.Message, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.IsSubscribe() {
-		s.activeClients[ClientUid].Subscribes[string(req.URL)] = true
+		s.clients[ClientUid].Subscribes[string(req.URL)] = true
 	} else {
-		s.activeClients[ClientUid].Subscribes[string(req.URL)] = false
+		s.clients[ClientUid].Subscribes[string(req.URL)] = false
 	}
 }
 
@@ -704,9 +746,9 @@ func (s *Server) subsURL(req *protocol.Message, URL string, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.IsSubscribe() {
-		s.activeClients[ClientUid].Subscribes[URL] = true
+		s.clients[ClientUid].Subscribes[URL] = true
 	} else {
-		s.activeClients[ClientUid].Subscribes[URL] = false
+		s.clients[ClientUid].Subscribes[URL] = false
 	}
 }
 
@@ -714,9 +756,9 @@ func (s *Server) subsF(req *protocol.Message, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.IsSubscribe() {
-		s.activeClients[ClientUid].Subscribes[string(req.URL)+"/"] = true
+		s.clients[ClientUid].Subscribes[string(req.URL)+"/"] = true
 	} else {
-		s.activeClients[ClientUid].Subscribes[string(req.URL)+"/"] = false
+		s.clients[ClientUid].Subscribes[string(req.URL)+"/"] = false
 	}
 }
 
@@ -724,9 +766,9 @@ func (s *Server) subsS(req *protocol.Message, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if req.IsSubscribe() {
-		s.activeClients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = true
+		s.clients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = true
 	} else {
-		s.activeClients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = false
+		s.clients[ClientUid].Subscribes[string(req.URL[:len(req.URL)-1])] = false
 	}
 }
 
@@ -743,18 +785,18 @@ func (s *Server) IsShutdown() bool {
 // It takes the ClientUid as a parameter, which is the unique identifier of the client.
 // There is no return type for this function.
 func (s *Server) closeConn(ClientUid uint32) {
-	c := s.activeClients[ClientUid]
+	c := s.clients[ClientUid]
 	// Quick Channel connection needs to close by client
 	c.Conn.Close()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// Clear Client Subscribes map
-	for k := range s.activeClients[ClientUid].Subscribes {
-		delete(s.activeClients[ClientUid].Subscribes, k)
+	for k := range s.clients[ClientUid].Subscribes {
+		delete(s.clients[ClientUid].Subscribes, k)
 	}
-	delete(s.quickChannel, s.activeClients[ClientUid].QAddr.String())
-	delete(s.activeClients, ClientUid)
+	delete(s.quickChannel, s.clients[ClientUid].QAddr.String())
+	delete(s.clients, ClientUid)
 }
 
 // Option contains all options for creating server.
@@ -762,4 +804,6 @@ type Option struct {
 	Password string
 	// TLSConfig for tcp and quic
 	TLSConfig *tls.Config
+	// automatic auth all clients to get pubs
+	AutoAuth bool
 }

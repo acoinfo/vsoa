@@ -16,8 +16,8 @@ func (s *Server) qpublisher(servicePath string, timeDriction time.Duration, pubs
 	defer ticker.Stop()
 
 	for range ticker.C {
-		for _, client := range s.activeClients {
-			if client.Subscribes[servicePath] {
+		for _, client := range s.clients {
+			if client.Subscribes[servicePath] && client.Authed {
 				//PUT URL into req otherwise client will not receive this publish
 				req.URL = []byte(servicePath)
 				s.qsendMessage(req, client.QAddr)

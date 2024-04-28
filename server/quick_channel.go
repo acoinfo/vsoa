@@ -14,7 +14,7 @@ import (
 // serveQuickListener serves the UDP listener of the VsoaServer.
 //
 // It takes an address string as a parameter and returns an error.
-func (s *Server) serveQuickListener(address string) (err error) {
+func (s *Server) serveQuickListener(_ string) (err error) {
 	qAddrServer := (*net.UDPAddr)(s.ln.Addr().(*net.TCPAddr))
 	s.qln, err = net.ListenUDP("udp", qAddrServer)
 	if err != nil {
@@ -30,18 +30,20 @@ func (s *Server) serveQuickListener(address string) (err error) {
 			continue
 		} else {
 			if clientUid, ok := s.quickChannel[(qAddr)]; ok {
-				if client, ok := s.activeClients[clientUid]; ok {
-					if client.Authed {
+				if client, ok := s.clients[clientUid]; ok {
+					if client.Active {
 						req := protocol.NewMessage()
 						r := bytes.NewBuffer(buf)
 						err = req.Decode(r)
 						if err != nil {
 							if errors.Is(err, io.EOF) {
-								log.Printf("Vsoa client has closed this connection: %s", s.qln.RemoteAddr().String())
+								if s.HandleServiceError == nil {
+									log.Printf("Vsoa client[%d] has closed this connection: %s", clientUid, s.qln.RemoteAddr().String())
+								}
 							}
 
 							if s.HandleServiceError != nil {
-								s.HandleServiceError(err)
+								s.HandleServiceError(clientUid, err)
 							}
 							return err
 						}
@@ -58,7 +60,7 @@ func (s *Server) serveQuickListener(address string) (err error) {
 //
 // It takes in a req of type *protocol.Message and ClientUid of type uint32.
 // It does not return anything.
-func (s *Server) processOneQuickRequest(req *protocol.Message, ClientUid uint32) {
+func (s *Server) processOneQuickRequest(req *protocol.Message, _ uint32) {
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 1024)

@@ -132,6 +132,7 @@ func startServer() {
 	// Init golang server
 	serverOption := server.Option{
 		Password: "123456",
+		AutoAuth: true,
 	}
 	s := server.NewServer("golang VSOA server", serverOption)
 
