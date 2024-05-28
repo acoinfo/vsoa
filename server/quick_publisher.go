@@ -8,14 +8,32 @@ import (
 	"gitee.com/sylixos/go-vsoa/protocol"
 )
 
-func (s *Server) qpublisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
+func (s *Server) qpublisher(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) {
 	req := protocol.NewMessage()
-	pubs(req, nil)
 
-	ticker := time.NewTicker(timeDriction)
-	defer ticker.Stop()
+	var ticker *time.Ticker
+	isTrigger := false
 
-	for range ticker.C {
+	switch v := timeOrTrigger.(type) {
+	case time.Duration:
+		ticker = time.NewTicker(v)
+		defer ticker.Stop()
+	case chan struct{}:
+		s.triggerChan[servicePath] = v
+		isTrigger = true
+	default:
+		panic("Invalid type for timeOrTrigger")
+	}
+
+	for {
+		if isTrigger {
+			<-s.triggerChan[servicePath]
+		} else {
+			<-ticker.C
+		}
+
+		pubs(req, nil)
+
 		for _, client := range s.clients {
 			if client.Subscribes[servicePath] && client.Authed {
 				//PUT URL into req otherwise client will not receive this publish

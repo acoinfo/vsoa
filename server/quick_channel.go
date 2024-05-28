@@ -72,9 +72,9 @@ func (s *Server) processOneQuickRequest(req *protocol.Message, _ uint32) {
 
 	res := protocol.NewMessage()
 
-	if handle, ok := s.routeMap["DATAGRAME."+string(req.URL)]; ok {
-		handle(req, res)
-	} else if handle, ok := s.routeMap["DATAGRAME.DEFAULT"]; ok {
-		handle(req, res)
+	if sh, ok := s.routeMap["DATAGRAME."+string(req.URL)]; ok {
+		sh.handler(req, res)
+	} else if sh, ok := s.routeMap["DATAGRAME.DEFAULT"]; ok {
+		sh.handler(req, res)
 	}
 }

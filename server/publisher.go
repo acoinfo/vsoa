@@ -14,13 +14,30 @@ import (
 // - servicePath: a string representing the service path to publish.
 // - timeDriction: a time.Duration value representing the time interval between each publish message.
 // - pubs: a function that takes two parameters: a pointer to a protocol.Message and a pointer to another protocol.Message. It is called to initialize the request message before publishing.
-func (s *Server) publisher(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) {
+func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) {
 	req := protocol.NewMessage()
 
-	ticker := time.NewTicker(timeDriction)
-	defer ticker.Stop()
+	var ticker *time.Ticker
+	isTrigger := false
 
-	for range ticker.C {
+	switch v := timeOrTrigger.(type) {
+	case time.Duration:
+		ticker = time.NewTicker(v)
+		defer ticker.Stop()
+	case chan struct{}:
+		s.triggerChan[servicePath] = v
+		isTrigger = true
+	default:
+		panic("Invalid type for timeOrTrigger")
+	}
+
+	for {
+		if isTrigger {
+			<-s.triggerChan[servicePath]
+		} else {
+			<-ticker.C
+		}
+
 		pubs(req, nil)
 
 		for _, client := range s.clients {

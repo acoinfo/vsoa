@@ -24,6 +24,8 @@ var (
 	ErrReqReachLimit        = errors.New("request reached rate limit")
 	ErrNilHandler           = errors.New("nil handler")
 	ErrNilPublishHandler    = errors.New("nil publish handler")
+	ErrWrongPublishTriger   = errors.New("wrong publish triger")
+	ErrNotRawPublishURL     = errors.New("not raw publish URL, does not need triger")
 	ErrAlreadyRegistered    = errors.New("URL has been Registered")
 )
 
@@ -85,6 +87,10 @@ type client struct {
 
 // Handler declares the signature of a function that can be bound to a Route.
 type Handler func(req *protocol.Message, resp *protocol.Message)
+type serverHandler struct {
+	handler Handler
+	rawFlag bool
+}
 
 // Server is the VSOA server that use TCP with UDP.
 type Server struct {
@@ -97,7 +103,8 @@ type Server struct {
 	writeTimeout time.Duration
 
 	routerMapMu sync.RWMutex
-	routeMap    map[string]Handler
+	routeMap    map[string]serverHandler
+	triggerChan map[string]chan struct{}
 
 	mu      sync.RWMutex
 	clients map[uint32]*client
@@ -143,7 +150,8 @@ func NewServer(name string, so Option) *Server {
 		quickChannel: make(map[string]uint32),
 		clients:      make(map[uint32]*client),
 		doneChan:     make(chan struct{}),
-		routeMap:     make(map[string]Handler),
+		routeMap:     make(map[string]serverHandler),
+		triggerChan:  make(map[string]chan struct{}),
 	}
 
 	s.isStarted.Store(false)
@@ -428,31 +436,31 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 
 	if !req.IsOneway() {
 		if req.IsRPC() {
-			if handle, ok := s.routeMap["RPC."+req.MessageRpcMethodText()+
+			if sh, ok := s.routeMap["RPC."+req.MessageRpcMethodText()+
 				"."+string(req.URL)]; ok {
-				if handle != nil {
-					handle(req, res)
+				if sh.handler != nil {
+					sh.handler(req, res)
 				}
 				res.SetStatusType(protocol.StatusSuccess)
 				goto SEND
 			}
-			if handle, ok := s.routeMap["RPC."+req.MessageRpcMethodText()+
+			if sh, ok := s.routeMap["RPC."+req.MessageRpcMethodText()+
 				"."+string(req.URL)+"/"]; ok {
-				if handle != nil {
-					handle(req, res)
+				if sh.handler != nil {
+					sh.handler(req, res)
 				}
 				res.SetStatusType(protocol.StatusSuccess)
 				goto SEND
 			}
 			// wdie check if any matches
-			for route, handler := range s.routeMap {
+			for route, sh := range s.routeMap {
 				// Find one handler and send
 				if strings.HasSuffix(route, "/") &&
 					strings.HasPrefix("RPC."+
 						req.MessageRpcMethodText()+
 						"."+string(req.URL), route) {
-					if handler != nil {
-						handler(req, res)
+					if sh.handler != nil {
+						sh.handler(req, res)
 					}
 					res.SetStatusType(protocol.StatusSuccess)
 					goto SEND
@@ -498,33 +506,33 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 	SEND:
 		s.sendResponse(res, conn)
 	} else {
-		if handle, ok := s.routeMap["DATAGRAME."+string(req.URL)]; ok {
-			if handle != nil {
-				handle(req, res)
+		if sh, ok := s.routeMap["DATAGRAME."+string(req.URL)]; ok {
+			if sh.handler != nil {
+				sh.handler(req, res)
 			}
 			return
 		}
-		if handle, ok := s.routeMap["DATAGRAME."+req.MessageRpcMethodText()+
+		if sh, ok := s.routeMap["DATAGRAME."+req.MessageRpcMethodText()+
 			"."+string(req.URL)+"/"]; ok {
-			if handle != nil {
-				handle(req, res)
+			if sh.handler != nil {
+				sh.handler(req, res)
 			}
 			return
 		}
 		// wdie check if any matches
-		for route, handler := range s.routeMap {
+		for route, sh := range s.routeMap {
 			// Find one and return
 			if strings.HasSuffix(route, "/") && strings.HasPrefix("DATAGRAME."+string(req.URL), route) {
-				if handler != nil {
-					handler(req, res)
+				if sh.handler != nil {
+					sh.handler(req, res)
 				}
 				return
 			}
 		}
 		// We still have a Default here
-		if handle, ok := s.routeMap["DATAGRAME.DEFAULT"]; ok {
-			if handle != nil {
-				handle(req, res)
+		if sh, ok := s.routeMap["DATAGRAME.DEFAULT"]; ok {
+			if sh.handler != nil {
+				sh.handler(req, res)
 			}
 		}
 	}
@@ -633,7 +641,7 @@ func (s *Server) On(servicePath string, serviceMethod protocol.RpcMessageType, h
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
 	if _, ok := s.routeMap["RPC."+protocol.RpcMethodText(serviceMethod)+"."+servicePath]; !ok {
-		s.routeMap["RPC."+protocol.RpcMethodText(serviceMethod)+"."+servicePath] = handler
+		s.routeMap["RPC."+protocol.RpcMethodText(serviceMethod)+"."+servicePath] = serverHandler{handler: handler, rawFlag: false}
 	} else {
 		return ErrAlreadyRegistered
 	}
@@ -650,7 +658,7 @@ func (s *Server) OnDatagram(servicePath string, handler func(*protocol.Message, 
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
 	if _, ok := s.routeMap["DATAGRAME."+servicePath]; !ok {
-		s.routeMap["DATAGRAME."+servicePath] = handler
+		s.routeMap["DATAGRAME."+servicePath] = serverHandler{handler: handler, rawFlag: false}
 	} else {
 		return ErrAlreadyRegistered
 	}
@@ -668,7 +676,7 @@ func (s *Server) OnDatagramDefault(handler func(*protocol.Message, *protocol.Mes
 	}
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	s.routeMap["DATAGRAME.DEFAULT"] = handler
+	s.routeMap["DATAGRAME.DEFAULT"] = serverHandler{handler: handler, rawFlag: false}
 	return nil
 }
 
@@ -677,22 +685,30 @@ func (s *Server) OnDatagramDefault(handler func(*protocol.Message, *protocol.Mes
 //
 // The function takes the following parameter(s):
 // - servicePath: a string representing the service path
-// - timeDriction: a time duration representing the time duration
+// - timeOrTrigger: a time duration representing the time duration or a trigger to send pubs in raw ways.
 // - pubs: a function that takes two pointers to protocol.Message and returns nothing
 //
 // It returns an error.
-func (s *Server) Publish(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) (err error) {
+func (s *Server) Publish(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) (err error) {
 	if pubs == nil {
 		return ErrNilPublishHandler
+	}
+	rawFlag := false
+	switch timeOrTrigger.(type) {
+	case time.Duration:
+	case chan struct{}:
+		rawFlag = true
+	default:
+		return ErrWrongPublishTriger
 	}
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
 
 	if _, ok := s.routeMap["SUBS/UNSUBS."+servicePath]; !ok {
 		// No need to have handler save in the routeMap
-		s.routeMap["SUBS/UNSUBS."+servicePath] = pubs
+		s.routeMap["SUBS/UNSUBS."+servicePath] = serverHandler{handler: pubs, rawFlag: rawFlag}
 		// Maybe it's bad to run a Publisher for each pub
-		go s.publisher(servicePath, timeDriction, pubs)
+		go s.publisher(servicePath, timeOrTrigger, pubs)
 	} else {
 		return ErrAlreadyRegistered
 	}
@@ -708,21 +724,46 @@ func (s *Server) Publish(servicePath string, timeDriction time.Duration, pubs fu
 //
 // Returns:
 // - err: an error if the publisher is already registered, otherwise nil
-func (s *Server) QuickPublish(servicePath string, timeDriction time.Duration, pubs func(*protocol.Message, *protocol.Message)) (err error) {
+func (s *Server) QuickPublish(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) (err error) {
 	if pubs == nil {
 		return ErrNilPublishHandler
+	}
+	rawFlag := false
+	switch timeOrTrigger.(type) {
+	case time.Duration:
+	case chan struct{}:
+		rawFlag = true
+	default:
+		return ErrWrongPublishTriger
 	}
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
 
 	if _, ok := s.routeMap["SUBS/UNSUBS."+servicePath]; !ok {
 		// No need to have handler save in the routeMap
-		s.routeMap["SUBS/UNSUBS."+servicePath] = pubs
+		s.routeMap["SUBS/UNSUBS."+servicePath] = serverHandler{handler: pubs, rawFlag: rawFlag}
 		// Maybe it's bad to run a Publisher for each pub
-		go s.qpublisher(servicePath, timeDriction, pubs)
+		go s.qpublisher(servicePath, timeOrTrigger, pubs)
 	} else {
 		return ErrAlreadyRegistered
 	}
+	return nil
+}
+
+func (s *Server) TriggerPublisher(servicePath string) error {
+	if s.routeMap["SUBS/UNSUBS."+servicePath].handler == nil {
+		return ErrNilPublishHandler
+	}
+
+	if s.routeMap["SUBS/UNSUBS."+servicePath].rawFlag == false {
+		return ErrNotRawPublishURL
+	}
+
+	if s.triggerChan[servicePath] == nil {
+		s.triggerChan[servicePath] = make(chan struct{}, 100)
+	}
+
+	s.triggerChan[servicePath] <- struct{}{}
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"net"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -169,8 +170,25 @@ func startServer() {
 	}
 	s.QuickPublish("/p/q", 1*time.Second, qpubs)
 
+	trigger := make(chan struct{}, 100)
+	i := 1
+	rawpubs := func(req, _ *protocol.Message) {
+		i++
+		req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-RAW-Publishing No. ` + strconv.Itoa(i) + `"}`).MarshalJSON()
+	}
+	s.Publish("/raw/p", trigger, rawpubs)
+
 	go func() {
 		_ = s.Serve("127.0.0.1:3003")
+	}()
+
+	go func() {
+		for {
+			time.Sleep(100 * time.Millisecond)
+			if s.TriggerPublisher("/raw/p") != nil {
+				break
+			}
+		}
 	}()
 	//defer s.Close()
 	// Done init golang server
