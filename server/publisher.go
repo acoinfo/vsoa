@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"gitee.com/sylixos/go-vsoa/protocol"
@@ -32,42 +34,75 @@ func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*pro
 	}
 
 	for {
+		var wg sync.WaitGroup
+		var ctx context.Context
+		var cancel context.CancelFunc
+		var timeout time.Duration
+
 		if isTrigger {
 			<-s.triggerChan[servicePath]
+			timeout = time.Duration(len(s.clients)) * time.Millisecond
+			ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		} else {
 			<-ticker.C
+			timeout = 4 * time.Duration(timeOrTrigger.(time.Duration)) / 5
+			ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		}
+
+		defer cancel()
 
 		pubs(req, nil)
 
-		for _, client := range s.clients {
-			if client.Subscribes[servicePath] && client.Authed {
-				//PUT URL into req otherwise client will not receive this publish
-				req.URL = []byte(servicePath)
-				s.sendMessage(req, client.Conn)
+		for _, c := range s.clients {
+			if c.Subscribes[servicePath] && c.Authed {
+				wg.Add(1)
+				go func(c *client) {
+					defer wg.Done()
+					reqCopy := *req // Aviod change req object at the same time.
+					reqCopy.URL = []byte(servicePath)
+					s.sendMessageWithContext(ctx, &reqCopy, c.Conn, timeout)
+				}(c)
 			}
+		}
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			// All sends completed within the period
+		case <-ctx.Done():
+			// Timeout, 4/5 of the period elapsed
 		}
 	}
 }
 
 // Normal channel Publish Message
-func (s *Server) sendMessage(req *protocol.Message, conn net.Conn) error {
-	req.SetMessageType(protocol.TypePublish)
+func (s *Server) sendMessageWithContext(ctx context.Context, req *protocol.Message, conn net.Conn, timeout time.Duration) {
+	select {
+	case <-ctx.Done():
+		// Context cancelled or timed out
+		return
+	default:
+		// Send the message
+		req.SetMessageType(protocol.TypePublish)
 
-	req.SetReply(false)
+		req.SetReply(false)
 
-	tmp, err := req.Encode(protocol.ChannelNormal)
-	if err != nil {
-		log.Panicln(err)
-		return err
+		tmp, err := req.Encode(protocol.ChannelNormal)
+		if err != nil {
+			log.Panicln(err)
+			return
+		}
+
+		conn.SetWriteDeadline(time.Now().Add(timeout))
+
+		_, err = conn.Write(tmp)
+		protocol.PutData(&tmp)
+
+		return
 	}
-
-	if s.writeTimeout != 0 {
-		conn.SetWriteDeadline(time.Now().Add(s.writeTimeout))
-	}
-
-	_, err = conn.Write(tmp)
-	protocol.PutData(&tmp)
-
-	return err
 }

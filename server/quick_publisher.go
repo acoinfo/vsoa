@@ -38,7 +38,7 @@ func (s *Server) qpublisher(servicePath string, timeOrTrigger any, pubs func(*pr
 			if client.Subscribes[servicePath] && client.Authed {
 				//PUT URL into req otherwise client will not receive this publish
 				req.URL = []byte(servicePath)
-				s.qsendMessage(req, client.QAddr)
+				go s.qsendMessage(req, client.QAddr)
 			}
 		}
 	}

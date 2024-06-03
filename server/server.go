@@ -719,7 +719,7 @@ func (s *Server) Publish(servicePath string, timeOrTrigger any, pubs func(*proto
 //
 // Parameters:
 // - servicePath: the path of the service
-// - timeDriction: the duration of time
+// - timeOrTrigger: a time duration representing the time duration or a trigger to send pubs in raw ways.
 // - pubs: a function that takes two protocol.Message parameters and returns nothing
 //
 // Returns:
