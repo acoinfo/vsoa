@@ -258,12 +258,12 @@ s.OnDatagramDefault(func(req, _ *protocol.Message) {
 })
 ```
 
-#### **Publish(servicePath string, timeDriction time.Duration, pubs func(\*protocol.Message, \*protocol.Message)) (err error)**
+#### **Publish(servicePath string, timeDriction any, pubs func(\*protocol.Message, \*protocol.Message)) (err error)**
 
 Publish a message, all clients subscribed to this URL will receive this message. The arguments of this function are as follows:
 
 + `servicePath` *{string}* publisging URL.  
-+ `timeDriction` *{time.Duration}* pusblish interval.  
++ `timeDriction` *{time.Duration|chan struct\{\}}* pusblish interval or manual trigger.  
 + `handler` *{func(\*protocol.Message, \*protocol.Message)}* publish callback handler.  
 + Returns: `err` *{error}* if `err == nil` means success.  
 
@@ -277,6 +277,29 @@ s := server.NewServer("golang VSOA PUBLISH server", server.Option{})
 s.Publish("/publisher", 1*time.Second, func(req, _ *protocol.Message) {
     req.Param, _ = json.RawMessage(`{"publish":"go-vsoa-Publishing"}`).MarshalJSON()
 })
+```
+
+``` golang
+trigger := make(chan struct{}, 100)
+i := 1
+rawpubs := func(req, _ *protocol.Message) {
+    i++
+    req.Param, _ = json.RawMessage(`{"publish":"GO-VSOA-RAW-Publishing No. ` + strconv.Itoa(i) + `"}`).MarshalJSON()
+}
+s.Publish("/raw/publisher", trigger, rawpubs)
+
+go func() {
+    _ = s.Serve("127.0.0.1:3001")
+}()
+
+go func() {
+    for {
+        time.Sleep(100 * time.Millisecond)
+        if s.TriggerPublisher("/raw/publisher") != nil {
+            break
+        }
+    }
+}()
 ```
 
 #### **QuickPublish(servicePath string, timeDriction time.Duration, pubs func(\*protocol.Message, \*protocol.Message)) (err error)**
