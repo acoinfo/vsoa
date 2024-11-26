@@ -236,7 +236,7 @@ func (s *Server) serveListener(ln net.Listener) error {
 	s.mu.Unlock()
 
 	for {
-		conn, e := ln.Accept()
+		conn, e := s.ln.Accept()
 		if e != nil {
 			if s.IsShutdown() {
 				<-s.doneChan
