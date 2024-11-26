@@ -6,7 +6,13 @@ GO-VSOA is a development library for VSOA (Vision Service Oriented Architecture)
 
 ## ChangeLog
 
-### 2023/12/25 V1.0.4
+### 2024/11/26 V1.0.5
+
+- Fix some bugs
+- Add Server NEW Feature: OnClient func
+- Add Server NEW Feature: RAW Publish by trigger  
+
+### 2023/12/25 v1.0.5
 
 - Happy Christmas Day!  
 - Server add Count API  
@@ -65,7 +71,7 @@ go env -w GO111MODULE=on
 ```
 
 Download this SDK to the src/ folder in GOPATH.
-Rename the go-vsoa folder to go-vsoa@v1.0.4.
+Rename the go-vsoa folder to go-vsoa@v1.0.5.
 Create two folders, `go-vsoa-server` and `go-vsoa-client`, in the src folder for the client and server, respectively.
 Go into each folder and save the following as go.mod.
 
@@ -76,9 +82,9 @@ module go-vsoa-server
 
 go 1.20
 
-require gitee.com/sylixos/go-vsoa v1.0.4
+require github.com/go-sylixos/go-vsoa v1.0.5
 
-replace gitee.com/sylixos/go-vsoa v1.0.4 => ../go-vsoa@v1.0.4
+replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ```
 
 For the `go-vsoa-client` folder:
@@ -88,9 +94,9 @@ module go-vsoa-client
 
 go 1.20
 
-require gitee.com/sylixos/go-vsoa v1.0.4
+require github.com/go-sylixos/go-vsoa v1.0.5
 
-replace gitee.com/sylixos/go-vsoa v1.0.4 => ../go-vsoa@v1.0.4
+replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ```
 
 ### Writing the Server
@@ -104,8 +110,8 @@ import (
     "encoding/json"
     "time"
 
-    "gitee.com/sylixos/go-vsoa/protocol"
-    "gitee.com/sylixos/go-vsoa/server"
+    "github.com/go-sylixos/go-vsoa/protocol"
+    "github.com/go-sylixos/go-vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -177,8 +183,8 @@ import (
     "errors"
     "fmt"
 
-    "gitee.com/sylixos/go-vsoa/client"
-    "gitee.com/sylixos/go-vsoa/protocol"
+    "github.com/go-sylixos/go-vsoa/client"
+    "github.com/go-sylixos/go-vsoa/protocol"
 )
 
 type RpcLightParam struct {

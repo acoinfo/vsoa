@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/position"
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/position"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 var (

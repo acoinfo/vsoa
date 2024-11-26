@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 type ServerStream struct {

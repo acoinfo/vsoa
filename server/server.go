@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 // ErrServerClosed is returned by the Server's Serve, ListenAndServe after a call to Shutdown or Close.

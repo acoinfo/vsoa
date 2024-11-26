@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 func (s *Server) qpublisher(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) {

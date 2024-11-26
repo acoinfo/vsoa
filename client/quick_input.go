@@ -3,7 +3,7 @@ package client
 import (
 	"strings"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 // quick channel will only receive server's publish in Quick channel

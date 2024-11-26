@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/protocol"
 )
 
 // pingLoop runs a loop to send ping messages to the server and handle the responses.

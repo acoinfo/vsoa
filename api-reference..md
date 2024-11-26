@@ -18,19 +18,12 @@ VSOA is a dual-channel communication protocol, using both **TCP** and **UDP**, a
 
 The total url and payload length of the VSOA data packet cannot exceed **256KBytes - 20Bytes** and **65507Bytes - 20Bytes** on quick channel, so if you need to send a large amount of data, you can use the VSOA data stream.
 
-[Download](https://workdrive.zohopublic.com.cn/external/c537e274b5e4835a55f21c7baf59fee84ae3ebd43ede97aca6606a086142313f)
- this SDK to the `src/` folder in GOPATH.
-Unzip `go-vsoa@v1.0.4.zip` to get `go-vsoa@v1.0.4` folder.
-Create your work folder in GOPATH for example `go-vsoa-example`.
-Go into your work folder and save the following as go.mod.
-
 ```mod  
 module example.com/go-vsoa-example
 
 go 1.20
 
-require gitee.com/sylixos/go-vsoa v1.0.4
-replace gitee.com/sylixos/go-vsoa v1.0.4 => ../go-vsoa@v1.0.4
+require github.com/go-sylixos/go-vsoa v1.0.5
 ```
 
 User can use the following code to import the vsoa's sub modules.
@@ -39,10 +32,10 @@ User can use the following code to import the vsoa's sub modules.
 
 ``` golang
 import (
-    "gitee.com/sylixos/go-vsoa/client"
-    "gitee.com/sylixos/go-vsoa/server"
-    "gitee.com/sylixos/go-vsoa/position"
-    "gitee.com/sylixos/go-vsoa/protocol"
+    "github.com/go-sylixos/go-vsoa/client"
+    "github.com/go-sylixos/go-vsoa/server"
+    "github.com/go-sylixos/go-vsoa/position"
+    "github.com/go-sylixos/go-vsoa/protocol"
 )
 ```
 

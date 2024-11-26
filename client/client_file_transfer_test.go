@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"gitee.com/sylixos/go-vsoa/protocol"
-	"gitee.com/sylixos/go-vsoa/server"
+	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/go-sylixos/go-vsoa/server"
 )
 
 type FileTransferTestParam struct {
