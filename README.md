@@ -11,7 +11,7 @@
 - Add Server NEW Feature: OnClient func
 - Add Server NEW Feature: RAW Publish by trigger  
 
-### 2023/12/25 v1.0.5
+### 2023/12/25 v1.0.4
 
 - Happy Christmas Day!  
 - Server add Count API  
