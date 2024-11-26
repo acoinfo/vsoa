@@ -85,7 +85,7 @@ positionList.Remove||
 positionList.ServePositionListener||
 positionList.LookUp||
 
-## VOSA Server package
+## VSOA Server package
 
 ### NewServer(name string, so Option) \*Server
 
@@ -334,7 +334,7 @@ h := func(req, res *protocol.Message) {
 s.On("/read", protocol.RpcMethodGet, h)
 ```
 
-## VOSA Client package
+## VSOA Client package
 
 ### **NewClient(option Option) \*Client**
 
