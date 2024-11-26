@@ -71,10 +71,7 @@ Golang编译器需要设置为启用go module模式。
 go env -w GO111MODULE=on
 ~~~  
 
-将本SDK下载到GOPATH中的src/文件夹下  
-将go-vsoa这个文件夹的名称修改为`go-vsoa@v1.0.5`  
 在src文件夹下创建两个文件夹`go-vsoa-server`、`go-vsoa-client`，分别放置客户端和服务端  
-
 分别进入两个文件夹并将以下文件保存为go.mod
 
 `go-vsoa-server`文件夹下：
@@ -85,8 +82,6 @@ module go-vsoa-server
 go 1.20
 
 require github.com/go-sylixos/go-vsoa v1.0.5
-
-replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ~~~  
 
 `go-vsoa-client`文件夹下：
@@ -97,8 +92,6 @@ module go-vsoa-client
 go 1.20
 
 require github.com/go-sylixos/go-vsoa v1.0.5
-
-replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ~~~  
 
 ### 编写服务端

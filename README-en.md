@@ -70,8 +70,6 @@ The Golang compiler needs to be set to enable go module mode.
 go env -w GO111MODULE=on
 ```
 
-Download this SDK to the src/ folder in GOPATH.
-Rename the go-vsoa folder to go-vsoa@v1.0.5.
 Create two folders, `go-vsoa-server` and `go-vsoa-client`, in the src folder for the client and server, respectively.
 Go into each folder and save the following as go.mod.
 
@@ -83,8 +81,6 @@ module go-vsoa-server
 go 1.20
 
 require github.com/go-sylixos/go-vsoa v1.0.5
-
-replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ```
 
 For the `go-vsoa-client` folder:
@@ -95,8 +91,6 @@ module go-vsoa-client
 go 1.20
 
 require github.com/go-sylixos/go-vsoa v1.0.5
-
-replace github.com/go-sylixos/go-vsoa v1.0.5 => ../go-vsoa@v1.0.5
 ```
 
 ### Writing the Server
