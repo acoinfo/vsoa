@@ -51,7 +51,7 @@
 | FreeBSD | YES |  
 | SylixOS | YES* |  
 
-SylixOS需要使用支持编译SylixOS系统的Golang编译器编译。具体可以联系[翼辉信息技术有限公司](https://acoinfo.com)
+SylixOS需要使用支持编译SylixOS系统的Golang编译器编译。发布在[GO add sylixos support](https://github.com/go-sylixos/go/releases)
 
 ## 发布形态
 
