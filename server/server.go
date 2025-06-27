@@ -755,7 +755,7 @@ func (s *Server) TriggerPublisher(servicePath string) error {
 		return ErrNilPublishHandler
 	}
 
-	if s.routeMap["SUBS/UNSUBS."+servicePath].rawFlag == false {
+	if !s.routeMap["SUBS/UNSUBS."+servicePath].rawFlag {
 		return ErrNotRawPublishURL
 	}
 

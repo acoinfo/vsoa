@@ -49,8 +49,6 @@ func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*pro
 			ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		}
 
-		defer cancel()
-
 		pubs(req, nil)
 
 		for _, c := range s.clients {
@@ -77,6 +75,8 @@ func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*pro
 		case <-ctx.Done():
 			// Timeout, 4/5 of the period elapsed
 		}
+
+		cancel()
 	}
 }
 
@@ -102,6 +102,10 @@ func (s *Server) sendMessageWithContext(ctx context.Context, req *protocol.Messa
 
 		_, err = conn.Write(tmp)
 		protocol.PutData(&tmp)
+		if err != nil {
+			log.Println("Error writing to connection:", err)
+			return
+		}
 
 		return
 	}
