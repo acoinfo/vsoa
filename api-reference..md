@@ -23,7 +23,7 @@ module example.com/go-vsoa-example
 
 go 1.20
 
-require github.com/go-sylixos/go-vsoa v1.0.5
+require github.com/acoinfo/go-vsoa v1.0.5
 ```
 
 User can use the following code to import the vsoa's sub modules.
@@ -32,10 +32,10 @@ User can use the following code to import the vsoa's sub modules.
 
 ``` golang
 import (
-    "github.com/go-sylixos/go-vsoa/client"
-    "github.com/go-sylixos/go-vsoa/server"
-    "github.com/go-sylixos/go-vsoa/position"
-    "github.com/go-sylixos/go-vsoa/protocol"
+    "github.com/acoinfo/go-vsoa/client"
+    "github.com/acoinfo/go-vsoa/server"
+    "github.com/acoinfo/go-vsoa/position"
+    "github.com/acoinfo/go-vsoa/protocol"
 )
 ```
 

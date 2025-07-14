@@ -8,7 +8,7 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/acoinfo/go-vsoa/protocol"
 )
 
 // serveQuickListener serves the UDP listener of the VsoaServer.

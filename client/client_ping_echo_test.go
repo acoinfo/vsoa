@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/acoinfo/go-vsoa/protocol"
 )
 
 var (

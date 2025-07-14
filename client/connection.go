@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-sylixos/go-vsoa/position"
-	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/acoinfo/go-vsoa/position"
+	"github.com/acoinfo/go-vsoa/protocol"
 )
 
 var (

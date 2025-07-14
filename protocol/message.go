@@ -18,7 +18,7 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/go-sylixos/go-vsoa/utils"
+	"github.com/acoinfo/go-vsoa/utils"
 )
 
 // Internal use in vsoa package

@@ -81,7 +81,7 @@ module go-vsoa-server
 
 go 1.20
 
-require github.com/go-sylixos/go-vsoa v1.0.5
+require github.com/acoinfo/go-vsoa v1.0.5
 ~~~  
 
 `go-vsoa-client`文件夹下：
@@ -91,7 +91,7 @@ module go-vsoa-client
 
 go 1.20
 
-require github.com/go-sylixos/go-vsoa v1.0.5
+require github.com/acoinfo/go-vsoa v1.0.5
 ~~~  
 
 ### 编写服务端
@@ -105,8 +105,8 @@ import (
     "encoding/json"
     "time"
 
-    "github.com/go-sylixos/go-vsoa/protocol"
-    "github.com/go-sylixos/go-vsoa/server"
+    "github.com/acoinfo/go-vsoa/protocol"
+    "github.com/acoinfo/go-vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -115,53 +115,31 @@ type RpcLightParam struct {
 
 var lightstatus = true
 
-func startServer() {
-    // 初始化Go VSOA server，此范例设置了server的密码为123455
-    // 如果不需要密码且没有其他的需求，此部分可以不设置，直接传空到server.NewServer函数中
-    serverOption := server.Option{
-        Password: "123456",
-    }
-    s := server.NewServer("golang VSOA server", serverOption)
+func getLight(req, resp *protocol.Message) {
+	status, _ := json.Marshal(lightstatus)
+	resp.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
+}
 
-    // 注册 light URL，RPC的GET方法
-    // 允许授权的客户端查询灯现在的状态
-    handleLightGet := func(req, res *protocol.Message) {
-        status, _ := json.Marshal(lightstatus)
-        res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
-        res.Data = req.Data
-    }
-    s.On("/light", protocol.RpcMethodGet, handleLightGet)
-
-    // 注册 light URL，RPC的SET方法
-    // 允许授权的客户端操作开灯或关灯
-    handleLightSet := func(req, res *protocol.Message) {
-        reqParam := new(RpcLightParam)
-        err := json.Unmarshal(req.Param, reqParam)
-
-        if err != nil {
-            status, _ := json.Marshal(lightstatus)
-            res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
-            return
-        }
-
-        lightstatus = reqParam.LightStatus
-        status, _ := json.Marshal(lightstatus)
-        res.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
-        res.Data = req.Data
-    }
-    s.On("/light", protocol.RpcMethodSet, handleLightSet)
-
-    go func() {
-        _ = s.Serve("0.0.0.0:3001")
-    }()
+func setLight(req, resp *protocol.Message) {
+	var p RpcLightParam
+	if err := json.Unmarshal(req.Param, &p); err != nil {
+		return
+	}
+	lightstatus = p.LightStatus
+	status, _ := json.Marshal(lightstatus)
+	resp.Param, _ = json.RawMessage(`{"Light On":` + string(status) + `}`).MarshalJSON()
 }
 
 func main() {
-    startServer()
+	s := server.NewServer("golang VSOA server",
+		server.Option{Password: "123456"})
 
-    for {
-        time.Sleep(1 * time.Second)
-    }
+	s.On("/light", protocol.RpcMethodGet, getLight)
+	s.On("/light", protocol.RpcMethodSet, setLight)
+
+	if err := s.Serve("localhost:3001"); err != nil {
+		log.Fatal(err)
+	}
 }
 
 ~~~  
@@ -178,8 +156,8 @@ import (
     "errors"
     "fmt"
 
-    "github.com/go-sylixos/go-vsoa/client"
-    "github.com/go-sylixos/go-vsoa/protocol"
+    "github.com/acoinfo/go-vsoa/client"
+    "github.com/acoinfo/go-vsoa/protocol"
 )
 
 type RpcLightParam struct {

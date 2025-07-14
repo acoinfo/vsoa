@@ -7,7 +7,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/acoinfo/go-vsoa/protocol"
 )
 
 // Subscribe server URL;

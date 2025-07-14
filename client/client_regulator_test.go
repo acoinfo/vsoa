@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-sylixos/go-vsoa/protocol"
+	"github.com/acoinfo/go-vsoa/protocol"
 )
 
 // TestSlot is a test function that tests the functionality of the Slot method in the Client struct.

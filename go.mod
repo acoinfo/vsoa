@@ -1,3 +1,3 @@
-module github.com/go-sylixos/go-vsoa
+module github.com/acoinfo/go-vsoa
 
-go 1.20
+go 1.24
