@@ -70,7 +70,7 @@ func TestMessage(t *testing.T) {
 		t.Errorf("got wrong Param: %v", DstParam.Password)
 	}
 
-	infostr := "Golang VSOA server"
+	infostr := `{"name":"Golang VSOA server"}`
 	infoParam := new(ServInfoResParam)
 	err = json.Unmarshal([]byte(infostr), infoParam)
 	if err != nil {

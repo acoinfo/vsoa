@@ -621,7 +621,7 @@ func (s *Server) authClient(ClientUid uint32, authed bool) {
 }
 
 func defaultOnClientHandler(clientUid uint32) (err error) {
-	log.Printf("Vsoa client[%d] active!", clientUid)
+	log.Printf("Vsoa client[%d] connected!", clientUid)
 	return nil
 }
 
