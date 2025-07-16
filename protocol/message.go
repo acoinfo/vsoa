@@ -5,7 +5,8 @@
 //
 // File: message.go Vehicle SOA protocal package.
 //
-// Author: Cheng.siyuan <chengsiyuan@acoinfo.com>
+// Author: Wang.yifan <wangyifan@acoinfo.com>
+// Contributor: Cheng.siyuan <chengsiyuan@acoinfo.com>
 
 package protocol
 
@@ -63,12 +64,13 @@ type Message struct {
 	Data  []byte
 }
 
-func smn(h *Header)
+func smn(h *Header) {
+	(*h)[0] = magicNumber
+}
 
 func NewMessage() *Message {
 	header := Header([HdrLength]byte{})
 	smn(&header)
-
 	return &Message{
 		Header: &header,
 	}
@@ -78,19 +80,25 @@ func NewMessage() *Message {
 // Format:
 type Header [HdrLength]byte
 
-func cmn(h Header) (ret bool)
+func cmn(h Header) bool {
+	return h[0] == magicNumber
+}
 
 func (h Header) checkMagicNumber() bool {
 	return cmn(h)
 }
 
-func vs(h Header) (ret byte)
+func vs(h Header) byte {
+	return h[0] >> 4
+}
 
 func (h Header) Version() byte {
 	return vs(h)
 }
 
-func msgt(h Header) (ret byte)
+func msgt(h Header) byte {
+	return h[1]
+}
 
 // MessageType returns the message type.
 func (h Header) MessageType() MessageType {
@@ -102,82 +110,106 @@ func (h Header) MessageTypeText() string {
 	return TypeText(h.MessageType())
 }
 
-func smt(h *Header, mt MessageType)
+func smt(h *Header, mt MessageType) {
+	(*h)[1] = byte(mt)
+}
 
 // SetMessageType sets message type.
 func (h *Header) SetMessageType(mt MessageType) {
 	smt(h, mt)
 }
 
-func ir(h Header) (ret bool)
+func ir(h Header) bool {
+	return h[1] == 0x01
+}
 
 // IsRPC returns whether the message is RPC message.
 func (h Header) IsRPC() bool {
 	return ir(h)
 }
 
-func in(h Header) (ret bool)
+func in(h Header) bool {
+	return h[1] == 0xfe
+}
 
 // IsPingEcho returns whether the message is ping echo message.
 func (h Header) IsNoop() bool {
 	return in(h)
 }
 
-func ipe(h Header) (ret bool)
+func ipe(h Header) bool {
+	return h[1] == 0xff
+}
 
 // IsPingEcho returns whether the message is ping echo message.
 func (h Header) IsPingEcho() bool {
 	return ipe(h)
 }
 
-func isi(h Header) (ret bool)
+func isi(h Header) bool {
+	return h[1] == 0x00
+}
 
 // IsServInfo returns whether the message is service info message.
 func (h Header) IsServInfo() bool {
 	return isi(h)
 }
 
-func iss(h Header) (ret bool)
+func iss(h Header) bool {
+	return h[1] == 0x02
+}
 
 // IsSubscribe returns whether the message is subscribe message.
 func (h Header) IsSubscribe() bool {
 	return iss(h)
 }
 
-func ius(h Header) (ret bool)
+func ius(h Header) bool {
+	return h[1] == 0x03
+}
 
 // IsUnSubscribe returns whether the message is unsubscribe info message.
 func (h Header) IsUnSubscribe() bool {
 	return ius(h)
 }
 
-func id(h Header) (ret bool)
-func ip(h Header) (ret bool)
-
-func (h Header) IsOneway() bool {
-	if id(h) || ip(h) {
-		return true
-	}
-	return false
+func id(h Header) bool {
+	return h[1] == 0x05
 }
 
-// SetPingEcho sets the type flag to ping echo fast.
-func spe(h *Header)
+func ip(h Header) bool {
+	return h[1] == 0x04
+}
+
+func (h Header) IsOneway() bool {
+	return id(h) || ip(h)
+}
+
+func spe(h *Header) {
+	(*h)[1] = 0xff
+}
 
 // SetPingEcho sets the type flag to ping echo fast.
 func (h *Header) SetPingEcho() {
 	spe(h)
 }
 
-func iR(h Header) (ret bool)
+func iR(h Header) bool {
+	return (h[2] & 0x01) != 0
+}
 
 // IsReply returns whether the message is reply message.
 func (h Header) IsReply() bool {
 	return iR(h)
 }
 
-func sRt(h *Header)
-func sRf(h *Header)
+func sRt(h *Header) {
+	(*h)[2] |= 0x01
+}
+
+func sRf(h *Header) {
+	(*h)[2] &^= 0x01
+}
 
 // SetReply sets the reply flag.
 func (h *Header) SetReply(r bool) {
@@ -188,35 +220,33 @@ func (h *Header) SetReply(r bool) {
 	}
 }
 
-func ivt(h Header) (ret bool)
+func ivt(h Header) bool {
+	return (h[2]>>1)&0x01 != 0
+}
 
-// IsValidTunid checks if the Header is a valid Tunid.
-//
-// It returns a boolean indicating whether the Header is a valid Tunid.
 func (h Header) IsValidTunid() bool {
 	return ivt(h)
 }
 
-func svt(h *Header)
+func svt(h *Header) {
+	(*h)[2] |= 0x02
+}
 
-// SetValidTunid sets the valid tunid of the Header struct.
-//
-// It takes no parameters.
-// There is no return type.
 func (h *Header) SetValidTunid() {
 	svt(h)
 }
 
-func mrm(h Header) (ret byte)
+func mrm(h Header) byte {
+	return (h[2] >> 2) & 0x01
+}
 
 // MessageRpcMethod returns the rpc method.
 // If it's not a RPC message in VSOA then it return 0xee
 func (h Header) MessageRpcMethod() RpcMessageType {
 	if h.IsRPC() {
 		return RpcMessageType(mrm(h))
-	} else {
-		return NoneRpc
 	}
+	return NoneRpc
 }
 
 // MessageRpcMethod returns the rpc method in text.
@@ -224,8 +254,13 @@ func (h Header) MessageRpcMethodText() string {
 	return RpcMethodText(h.MessageRpcMethod())
 }
 
-func smrmg(h *Header)
-func smrms(h *Header)
+func smrmg(h *Header) {
+	(*h)[2] &^= 0x04
+}
+
+func smrms(h *Header) {
+	(*h)[2] |= 0x04
+}
 
 // MessageRpcMethod returns the rpc method.
 // If it's not a RPC message in VSOA then it return 0xee
@@ -237,22 +272,27 @@ func (h *Header) SetMessageRpcMethod(t RpcMessageType) {
 	}
 }
 
-func pl(h Header) (ret byte)
+func pl(h Header) byte {
+	return (h[2] >> 6) & 0x03
+}
 
 // Internel use padLen return the pad length for 4 byte pad for whole massage.
 func (h Header) padLen() byte {
 	return pl(h)
 }
 
-func spl(h *Header, pl byte)
+func spl(h *Header, pl byte) {
+	(*h)[2] = ((*h)[2] & 0x3f) | ((pl & 0x03) << 6)
+}
 
 // Internel use to pad the massage and fill the pad length flag automatic
 func (h *Header) setPadLen(pl byte) {
-	// clear PadLen flag
 	spl(h, pl)
 }
 
-func st(h Header) (ret byte)
+func st(h Header) byte {
+	return h[3]
+}
 
 // StatusType returns the message status type.
 func (h Header) StatusType() StatusType {
@@ -264,35 +304,45 @@ func (h Header) StatusTypeText() string {
 	return StatusText(h.StatusType())
 }
 
-func sst(h *Header, mt StatusType)
+func sst(h *Header, mt StatusType) {
+	(*h)[3] = byte(mt)
+}
 
 // SetStatusType sets message status type.
 func (h *Header) SetStatusType(mt StatusType) {
 	sst(h, mt)
 }
 
-func sn(h Header) (ret uint32)
+func sn(h Header) uint32 {
+	return binary.BigEndian.Uint32(h[4:8])
+}
 
 // SeqNo returns sequence number of messages.
 func (h Header) SeqNo() uint32 {
 	return sn(h)
 }
 
-func ssn(h *Header, seq uint32)
+func ssn(h *Header, seq uint32) {
+	binary.BigEndian.PutUint32((*h)[4:8], seq)
+}
 
 // SetSeqNo sets  sequence number.
 func (h *Header) SetSeqNo(seq uint32) {
 	ssn(h, seq)
 }
 
-func tid(h Header) (ret uint16)
+func tid(h Header) uint16 {
+	return binary.BigEndian.Uint16(h[8:10])
+}
 
 // TunID returns Tunnel id number for VSOA client.
 func (h Header) TunID() uint16 {
 	return tid(h)
 }
 
-func stid(h *Header, ti uint16)
+func stid(h *Header, ti uint16) {
+	binary.BigEndian.PutUint16((*h)[8:10], ti)
+}
 
 // SetTunID set VSOA client Tunnel id number.
 // It should be tunnel port number.
