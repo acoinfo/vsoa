@@ -846,17 +846,27 @@ func (s *Server) IsShutdown() bool {
 // It takes the ClientUid as a parameter, which is the unique identifier of the client.
 // There is no return type for this function.
 func (s *Server) closeConn(ClientUid uint32) {
-	c := s.clients[ClientUid]
-	// Quick Channel connection needs to close by client
-	c.Conn.Close()
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// Clear Client Subscribes map
-	for k := range s.clients[ClientUid].Subscribes {
-		delete(s.clients[ClientUid].Subscribes, k)
+
+	c, ok := s.clients[ClientUid]
+	if !ok {
+		return
 	}
-	delete(s.quickChannel, s.clients[ClientUid].QAddr.String())
+
+	if c.Conn != nil {
+		c.Conn.Close()
+	}
+
+	// Clear Client Subscribes map
+	for k := range c.Subscribes {
+		delete(c.Subscribes, k)
+	}
+
+	if c.QAddr != nil {
+		delete(s.quickChannel, c.QAddr.String())
+	}
+
 	delete(s.clients, ClientUid)
 }
 

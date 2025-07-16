@@ -135,6 +135,18 @@ func (s *Server) sendMessageWithContext(ctx context.Context, req *protocol.Messa
 		_, err = conn.Write(tmp)
 		protocol.PutData(&tmp)
 		if err != nil {
+			if strings.Contains(err.Error(), "broken pipe") ||
+				strings.Contains(err.Error(), "connection reset by peer") {
+				s.mu.RLock()
+				for uid, client := range s.clients {
+					if client.Conn == conn {
+						s.mu.RUnlock()
+						s.closeConn(uid)
+						return
+					}
+				}
+				s.mu.RUnlock()
+			}
 			log.Println("Error writing to connection:", err)
 			return
 		}
