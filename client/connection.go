@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/position"
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/position"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 var (

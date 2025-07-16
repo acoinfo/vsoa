@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 func (s *Server) qpublisher(servicePath string, timeOrTrigger any, pubs func(*protocol.Message, *protocol.Message)) {

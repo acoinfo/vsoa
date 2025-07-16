@@ -10,39 +10,28 @@ GO-VSOA is a development library for VSOA (Vision Service Oriented Architecture)
 
 - Fix some bugs
 - Add Server NEW Feature: OnClient func
-- Add Server NEW Feature: RAW Publish by trigger  
+- Add Server NEW Feature: RAW Publish by trigger
 
 ### 2023/12/25 v1.0.4
 
-- Happy Christmas Day!  
-- Server add Count API  
-- Better stream test example with `client_file_transfer_test.go`  
-- Add Client NEW Feature: Regulator  
+- Happy Christmas Day!
+- Server add Count API
+- Better stream test example with `client_file_transfer_test.go`
+- Add Client NEW Feature: Regulator
 
 ### 2023/10/12 V1.0.3
 
-- Change Server API!  
-- Server now can handle widecard match  
-- Change module URL to gitee.com  
+- Change Server API!
+- Server now can handle widecard match
+- Change module URL to gitee.com
 
 ### 2023/10/08 V1.0.1
 
-- Release V1.0.1 ver  
-- Support RPC/SUB/UNSUB/PUB/DATAGRAM  
-- Not Supoort QoS  
+- Release V1.0.1 ver
+- Support RPC/SUB/UNSUB/PUB/DATAGRAM
+- Not Supoort QoS
 
 ## Currently Supported Platforms
-
-### Architectural Platforms
-
-| Architecture   | Support |
-| -------------- | ------- |
-| amd64          | YES     |
-| x86            | NO      |
-| aarch64        | YES     |
-| arm            | NO      |
-
-### Operating System Platforms
 
 | System     | Support |
 | ---------- | ------- |
@@ -70,42 +59,42 @@ The Golang compiler needs to be set to enable go module mode.
 go env -w GO111MODULE=on
 ```
 
-Create two folders, `go-vsoa-server` and `go-vsoa-client`, in the src folder for the client and server, respectively.
+Create two folders, `vsoa-server` and `vsoa-client`, in the src folder for the client and server, respectively.
 Go into each folder and save the following as go.mod.
 
-For the `go-vsoa-server` folder:
+For the `vsoa-server` folder:
 
-```mod  
-module go-vsoa-server
+```mod
+module vsoa-server
 
-go 1.20
+go 1.24
 
-require github.com/acoinfo/go-vsoa v1.0.5
+require github.com/acoinfo/vsoa v1.0.5
 ```
 
-For the `go-vsoa-client` folder:
+For the `vsoa-client` folder:
 
-```mod  
-module go-vsoa-client
+```mod
+module vsoa-client
 
-go 1.20
+go 1.24
 
-require github.com/acoinfo/go-vsoa v1.0.5
+require github.com/acoinfo/vsoa v1.0.5
 ```
 
 ### Writing the Server
 
 File name: `server.go`
 
-```go  
+```go
 package main
 
 import (
     "encoding/json"
     "time"
 
-    "github.com/acoinfo/go-vsoa/protocol"
-    "github.com/acoinfo/go-vsoa/server"
+    "github.com/acoinfo/vsoa/protocol"
+    "github.com/acoinfo/vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -141,123 +130,87 @@ func main() {
 	}
 }
 
-```  
+```
 
 ### Writing the Client
 
 File name: `client.go`
 
-```go  
+```go
 package main
 
 import (
-    "encoding/json"
-    "errors"
-    "fmt"
+	"encoding/json"
+	"fmt"
+	"vsoa-examples/rpc"
+	"log"
 
-    "github.com/acoinfo/go-vsoa/client"
-    "github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/client"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
-type RpcLightParam struct {
-    LightStatus bool `json:"Light On"`
-}
+func vsoaRpcCall(c *client.Client, method protocol.RpcMessageType, param json.RawMessage) bool {
+	req := protocol.NewMessage()
+	req.Param = param
 
-var lightstatus = false
+	reply, err := c.Call(rpc.RpcExampleURL, protocol.TypeRPC, method, req)
+	if err != nil {
+		fmt.Println("call error:", err)
+		return false
+	}
 
-func VsoaRpcCall() {
-    clientOption := client.Option{
-        Password: "123456",
-    }
-
-    c := client.NewClient(clientOption)
-    _, err := c.Connect("vsoa", "localhost:3001")
-    if err != nil {
-        fmt.Println(err)
-    }
-    defer c.Close()
-
-    req := protocol.NewMessage()
-
-    // Query the current status of the light.
-    reply, err := c.Call("/light", protocol.TypeRPC, protocol.RpcMethodGet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        lightstatus = DstParam.LightStatus
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Get ", "Light On:", DstParam.LightStatus)
-    }
-
-    // If the light is currently on, turn it off; if it's off, turn it on.
-    if lightstatus {
-        req.Param, _ = json.RawMessage(`{"Light On":false}`).MarshalJSON()
-    } else {
-        req.Param, _ = json.RawMessage(`{"Light On":true}`).MarshalJSON()
-    }
-    reply, err = c.Call("/light", protocol.TypeRPC, protocol.RpcMethodSet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Set ", "Light On:", DstParam.LightStatus)
-    }
-
-    // Query the status of the light after executing the operation.
-    reply, err = c.Call("/light", protocol.TypeRPC, protocol.RpcMethodGet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Get ", "Light On:", DstParam.LightStatus)
-    }
+	var dst rpc.RpcLightParam
+	if err := json.Unmarshal(reply.Param, &dst); err != nil {
+		log.Println("unmarshal error:", err)
+		return false
+	}
+	fmt.Printf("Seq:%d RPC %s Light On:%v\n", reply.SeqNo(), protocol.RpcMethodText(method), dst.LightStatus)
+	return dst.LightStatus
 }
 
 func main() {
-    VsoaRpcCall()
+	c := client.NewClient(client.Option{Password: rpc.Password})
+	if _, err := c.Connect("vsoa", rpc.ServerAddr); err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer c.Close()
+
+	lightOn := vsoaRpcCall(c, protocol.RpcMethodGet, nil)
+
+	cmd, _ := json.Marshal(map[string]bool{"Light On": !lightOn})
+	fmt.Println("cmd:", string(cmd))
+	vsoaRpcCall(c, protocol.RpcMethodSet, cmd)
+
+	vsoaRpcCall(c, protocol.RpcMethodGet, nil)
 }
 ```  
 
 ### Running the Example Program
 
-Navigate to the go-vsoa-server and go-vsoa-client folders separately using the command line/terminal.
+Navigate to the vsoa-server and vsoa-client folders separately using the command line/terminal.
 Execute the go build command and then run the generated executable:
 
-For `go-vsoa-server`:
+For `vsoa-server`:
 
 ```bash
-cd go-vsoa-server
+cd vsoa-server
 go build
-./go-vsoa-server
+./vsoa-server
 
 # On Windows
-.\go-vsoa-server.exe
+.\vsoa-server.exe
 ```  
 
-For `go-vsoa-client`:
+For `vsoa-client`:
 
 ```bash
-cd go-vsoa-client
+cd vsoa-client
 go build
-./go-vsoa-client
+./vsoa-client
 
 # On Windows
-.\go-vsoa-client.exe
+.\vsoa-client.exe
 ```
 
 ### Expected Results

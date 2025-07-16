@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 // pingLoop runs a loop to send ping messages to the server and handle the responses.

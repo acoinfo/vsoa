@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 // publisher is a method of the VsoaServer struct that sends a publish message to all active clients subscribed to a specific service path at the specified time interval.

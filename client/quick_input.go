@@ -3,7 +3,7 @@ package client
 import (
 	"strings"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 // quick channel will only receive server's publish in Quick channel

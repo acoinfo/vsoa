@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 type ServerStream struct {

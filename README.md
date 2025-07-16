@@ -1,66 +1,58 @@
 # GO-VSOA 使用Pure GO实现的VSOA SDK框架
 
-完全使用Go和Go汇编实现的VSOA开发库，不需要任何C库和CGO的依赖。
-[VSOA](https://www.acoinfo.com/product/5330/)是翼辉自主设计的任务关键型分布式微服务架构。此项目是翼辉在原有基础上推出的Go语言官方SDK。
+完全使用 Go 的 VSOA 开发库，不需要任何 C 库、汇编和 CGO 的依赖。
+[VSOA](https://www.acoinfo.com/product/5330/)是翼辉自主设计的任务关键型分布式微服务架构。此项目是翼辉在原有基础上推出的 Go 语言官方 SDK。
 
 ## ChangeLog
+
+### 2025/07/16 V1.1.0
+
+- Fix some bugs on Pub/Sub
+- Drop Assembly
+- Optimized message processing
+- Change module name to vsoa
 
 ### 2024/11/26 V1.0.5
 
 - Fix some bugs
 - Add Server NEW Feature: OnClient func
-- Add Server NEW Feature: RAW Publish by trigger  
+- Add Server NEW Feature: RAW Publish by trigger
 
 ### 2023/12/25 v1.0.4
 
-- Happy Christmas Day!  
-- Server add Count API  
-- Better stream test example with `client_file_transfer_test.go`  
-- Add Client NEW Feature: Regulator  
+- Happy Christmas Day!
+- Server add Count API
+- Better stream test example with `client_file_transfer_test.go`
+- Add Client NEW Feature: Regulator
 
 ### 2023/10/12 V1.0.3
 
-- Change Server API!  
-- Server now can handle widecard match  
-- Change module URL to gitee.com  
+- Change Server API!
+- Server now can handle widecard match
+- Change module URL to gitee.com
 
 ### 2023/10/08 V1.0.1
 
-- Release V1.0.1 ver  
-- Support RPC/SUB/UNSUB/PUB/DATAGRAM  
-- Not Supoort QoS  
+- Release V1.0.1 ver
+- Support RPC/SUB/UNSUB/PUB/DATAGRAM
+- Not Supoort QoS
 
 ## 目前可以使用的平台
 
-### 架构平台
+| 系统 | 支持 |
+-------- | -----
+| Windows | YES |
+| MacOS | YES |
+| Linux | YES |
+| FreeBSD | YES |
+| SylixOS | YES* |
 
-| 架构 | 支持 |  
--------- | -----  
-| amd64架构 | YES |  
-| x86架构 | NO |  
-| aarch64架构 | YES |
-| arm架构 | NO |  
-
-### 操作系统平台
-
-| 系统 | 支持 |  
--------- | -----  
-| Windows | YES |  
-| MacOS | YES |  
-| Linux | YES |  
-| FreeBSD | YES |  
-| SylixOS | YES* |  
-
-SylixOS需要使用支持编译SylixOS系统的Golang编译器编译。发布在[GO add sylixos support](https://github.com/go-sylixos/go/releases)
-
-## 发布形态
-
-目前go-vsoa使用本地仓库的型式进行发布，在V1.1.0版本以后将修改为线上与线下同步发布。
+SylixOS 需要使用支持编译 SylixOS 系统的 Golang 编译器编译。发布在 [GO SylixOS SDK](https://github.com/acoinfo/go/releases)
 
 ## 简单RPC示例代码
 
-本范例假设使用者已经学习过Go语言基础，同时能够理解go module的工作逻辑。  
-我们将写一个可以开关控制灯光，且能够读取当前灯光状态的C/S例程。  
+本范例假设使用者已经学习过 Go 语言基础，同时能够理解 go module 的工作逻辑。
+我们将写一个可以开关控制灯光，且能够读取当前灯光状态的C/S例程。
 其他示例代码在配套发布的example文件夹中可以找到。
 
 ### 预处理（本地离线模式）
@@ -71,42 +63,42 @@ Golang编译器需要设置为启用go module模式。
 go env -w GO111MODULE=on
 ~~~  
 
-在src文件夹下创建两个文件夹`go-vsoa-server`、`go-vsoa-client`，分别放置客户端和服务端  
+在src文件夹下创建两个文件夹`vsoa-server`、`vsoa-client`，分别放置客户端和服务端
 分别进入两个文件夹并将以下文件保存为go.mod
 
-`go-vsoa-server`文件夹下：
+`vsoa-server`文件夹下：
 
 ~~~mod  
-module go-vsoa-server
+module vsoa-server
 
-go 1.20
+go 1.24
 
-require github.com/acoinfo/go-vsoa v1.0.5
-~~~  
+require github.com/acoinfo/vsoa v1.0.5
+~~~
 
-`go-vsoa-client`文件夹下：
+`vsoa-client`文件夹下：
 
-~~~mod  
-module go-vsoa-client
+~~~mod
+module vsoa-client
 
-go 1.20
+go 1.24
 
-require github.com/acoinfo/go-vsoa v1.0.5
+require github.com/acoinfo/vsoa v1.0.5
 ~~~  
 
 ### 编写服务端
 
-文件名：`server.go`  
+文件名：`server.go`
 
-~~~go  
+~~~go
 package main
 
 import (
     "encoding/json"
     "time"
 
-    "github.com/acoinfo/go-vsoa/protocol"
-    "github.com/acoinfo/go-vsoa/server"
+    "github.com/acoinfo/vsoa/protocol"
+    "github.com/acoinfo/vsoa/server"
 )
 
 type RpcLightParam struct {
@@ -146,121 +138,85 @@ func main() {
 
 ### 编写客户端
 
-文件名：`client.go`  
+文件名：`client.go`
 
-~~~go  
+~~~go
 package main
 
 import (
-    "encoding/json"
-    "errors"
-    "fmt"
+	"encoding/json"
+	"fmt"
+	"vsoa-examples/rpc"
+	"log"
 
-    "github.com/acoinfo/go-vsoa/client"
-    "github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/client"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
-type RpcLightParam struct {
-    LightStatus bool `json:"Light On"`
-}
+func vsoaRpcCall(c *client.Client, method protocol.RpcMessageType, param json.RawMessage) bool {
+	req := protocol.NewMessage()
+	req.Param = param
 
-var lightstatus = false
+	reply, err := c.Call(rpc.RpcExampleURL, protocol.TypeRPC, method, req)
+	if err != nil {
+		fmt.Println("call error:", err)
+		return false
+	}
 
-func VsoaRpcCall() {
-    clientOption := client.Option{
-        Password: "123456",
-    }
-
-    c := client.NewClient(clientOption)
-    _, err := c.Connect("vsoa", "localhost:3001")
-    if err != nil {
-        fmt.Println(err)
-    }
-    defer c.Close()
-
-    req := protocol.NewMessage()
-
-    // 查询现在light的状态
-    reply, err := c.Call("/light", protocol.TypeRPC, protocol.RpcMethodGet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        lightstatus = DstParam.LightStatus
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Get ", "Light On:", DstParam.LightStatus)
-    }
-
-    // 如果现在灯是亮的就关闭它，如果现在灯是关的就打开它
-    if lightstatus {
-        req.Param, _ = json.RawMessage(`{"Light On":false}`).MarshalJSON()
-    } else {
-        req.Param, _ = json.RawMessage(`{"Light On":true}`).MarshalJSON()
-    }
-    reply, err = c.Call("/light", protocol.TypeRPC, protocol.RpcMethodSet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Set ", "Light On:", DstParam.LightStatus)
-    }
-
-    // 查询执行操作后灯的状态
-    reply, err = c.Call("/light", protocol.TypeRPC, protocol.RpcMethodGet, req)
-    if err != nil {
-        if err == errors.New(protocol.StatusText(protocol.StatusInvalidUrl)) {
-            fmt.Println("Pass: Invalid URL")
-        } else {
-            fmt.Println(err)
-        }
-    } else {
-        DstParam := new(RpcLightParam)
-        json.Unmarshal(reply.Param, DstParam)
-        fmt.Println("Seq:", reply.SeqNo(), "RPC Get ", "Light On:", DstParam.LightStatus)
-    }
+	var dst rpc.RpcLightParam
+	if err := json.Unmarshal(reply.Param, &dst); err != nil {
+		log.Println("unmarshal error:", err)
+		return false
+	}
+	fmt.Printf("Seq:%d RPC %s Light On:%v\n", reply.SeqNo(), protocol.RpcMethodText(method), dst.LightStatus)
+	return dst.LightStatus
 }
 
 func main() {
-    VsoaRpcCall()
+	c := client.NewClient(client.Option{Password: rpc.Password})
+	if _, err := c.Connect("vsoa", rpc.ServerAddr); err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer c.Close()
+
+	lightOn := vsoaRpcCall(c, protocol.RpcMethodGet, nil)
+
+	cmd, _ := json.Marshal(map[string]bool{"Light On": !lightOn})
+	fmt.Println("cmd:", string(cmd))
+	vsoaRpcCall(c, protocol.RpcMethodSet, cmd)
+
+	vsoaRpcCall(c, protocol.RpcMethodGet, nil)
 }
-~~~  
+~~~
 
 ### 运行示例程序
 
-通过命令行/终端程序分别进入`go-vsoa-server`、`go-vsoa-client`文件夹  
+通过命令行/终端程序分别进入`vsoa-server`、`vsoa-client`文件夹
 执行 `go build` 指令，后运行生成的可执行文件:
 
 ~~~bash
-cd go-vsoa-server
+cd vsoa-server
 go build
-./go-vsoa-server
+./vsoa-server
 
-# Windows下 
-.\go-vsoa-server.exe
-~~~  
+# Windows下
+.\vsoa-server.exe
+~~~
 
 ~~~bash
-cd go-vsoa-client
+cd vsoa-client
 go build
-./go-vsoa-client
+./vsoa-client
 
-# Windows下 
-.\go-vsoa-client.exe
-~~~  
+# Windows下
+.\vsoa-client.exe
+~~~
 
 ### 预期结果
 
-服务器程序不显示任何输出。  
-客户端程序输出类似如下打印：  
+服务器程序不显示任何输出。
+客户端程序输出类似如下打印：
 
 ~~~bash
 Seq: 1 RPC Get  Light On: true

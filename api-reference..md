@@ -19,11 +19,11 @@ VSOA is a dual-channel communication protocol, using both **TCP** and **UDP**, a
 The total url and payload length of the VSOA data packet cannot exceed **256KBytes - 20Bytes** and **65507Bytes - 20Bytes** on quick channel, so if you need to send a large amount of data, you can use the VSOA data stream.
 
 ```mod  
-module example.com/go-vsoa-example
+module example.com/vsoa-example
 
 go 1.20
 
-require github.com/acoinfo/go-vsoa v1.0.5
+require github.com/acoinfo/vsoa v1.0.5
 ```
 
 User can use the following code to import the vsoa's sub modules.
@@ -32,10 +32,10 @@ User can use the following code to import the vsoa's sub modules.
 
 ``` golang
 import (
-    "github.com/acoinfo/go-vsoa/client"
-    "github.com/acoinfo/go-vsoa/server"
-    "github.com/acoinfo/go-vsoa/position"
-    "github.com/acoinfo/go-vsoa/protocol"
+    "github.com/acoinfo/vsoa/client"
+    "github.com/acoinfo/vsoa/server"
+    "github.com/acoinfo/vsoa/position"
+    "github.com/acoinfo/vsoa/protocol"
 )
 ```
 
@@ -106,7 +106,7 @@ s := server.NewServer("golang VSOA RPC server", server.Option{})
 
 + `Name` *{string}* Used for ServInfo.  
 
-The VSOA Server Struct is responsible for the entire lifecycle of go-vsoa. It's has `On`/`OnDatagram`/`OnDatagramDefault`/`Publish`/`QuickPublish` methods to add processing callbacks for different services.
+The VSOA Server Struct is responsible for the entire lifecycle of vsoa. It's has `On`/`OnDatagram`/`OnDatagramDefault`/`Publish`/`QuickPublish` methods to add processing callbacks for different services.
 
 #### **Close() (err error)**
 
@@ -268,7 +268,7 @@ URL matching: URL uses `'/'` as a separator, for example: `'/a/b/c'`, if the cli
 s := server.NewServer("golang VSOA PUBLISH server", server.Option{})
 
 s.Publish("/publisher", 1*time.Second, func(req, _ *protocol.Message) {
-    req.Param, _ = json.RawMessage(`{"publish":"go-vsoa-Publishing"}`).MarshalJSON()
+    req.Param, _ = json.RawMessage(`{"publish":"vsoa-Publishing"}`).MarshalJSON()
 })
 ```
 
@@ -314,7 +314,7 @@ URL matching: URL uses `'/'` as a separator, for example: `'/a/b/c'`, if the cli
 s := server.NewServer("golang VSOA PUBLISH server", server.Option{})
 
 s.QuickPublish("/publisher/quick", 1*time.Second, func(req, _ *protocol.Message) {
-    req.Param, _ = json.RawMessage(`{"publish":"go-vsoa-Publishing in quick channel"}`).MarshalJSON()
+    req.Param, _ = json.RawMessage(`{"publish":"vsoa-Publishing in quick channel"}`).MarshalJSON()
 })
 ```
 
@@ -382,7 +382,7 @@ c := client.NewClient(client.Option{Password: "123456"})
 + `QConn` *{\*net.UDPConn}* Quick Datagram/Publish goes UDPs.  
 + `SubscribeList` *{map[string]func(m \*protocol.Message)}* used for server publish.  
 
-The VSOA Client Struct is responsible for the entire lifecycle of go-vsoa. It's has `Connect`/`Go`/`Call`/`Subscribe`/`UnSubscribe` methods to processing connections or calls to VSOA server.
+The VSOA Client Struct is responsible for the entire lifecycle of vsoa. It's has `Connect`/`Go`/`Call`/`Subscribe`/`UnSubscribe` methods to processing connections or calls to VSOA server.
 
 #### **Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerInfo string, err error)**
 
@@ -484,12 +484,12 @@ Call method for client is call server asynchronously.
 
 When calling a RPC call all params is needed.
 
-+ `URL` *{string}* should be servicePath.  
-+ `mt` *{protocol.MessageType}* should be `protocol.TypeRPC`.  
-+ `flags` *{any}* should be `protocal.RpcMethodGet` or `protocal.RpcMethodSet`.  
-+ `req` *{\*protocol.Message}* should be whole request message.  
-+ Returns: *{\*protocol.Message}* for server save server reply's message.  
-+ Returns: *{error}* if there is no error it should be `nil`.  
++ `URL` *{string}* should be servicePath.
++ `mt` *{protocol.MessageType}* should be `protocol.TypeRPC`.
++ `flags` *{any}* should be `protocal.RpcMethodGet` or `protocal.RpcMethodSet`.
++ `req` *{\*protocol.Message}* should be whole request message.
++ Returns: *{\*protocol.Message}* for server save server reply's message.
++ Returns: *{error}* if there is no error it should be `nil`.
 
 > **Example**
 
@@ -511,7 +511,7 @@ if err != nil {
 When calling a DATAGRAM call all params is needed.
 
 + `URL` *{string}* should be servicePath.  
-+ `mt` *{protocol.MessageType}* should be `protocol.TypeDatagram`.  
++ `mt` *{byte}* should be `protocol.TypeDatagram`.  
 + `flags` *{any}* should be `protocal.ChannelQuick` or `protocal.ChannelNormal`.  
 + `req` *{\*protocol.Message}* should be whole request message.  
 + Returns: *{\*protocol.Message}* is always empty  .

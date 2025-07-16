@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 func (client *Client) input() {

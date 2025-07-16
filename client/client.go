@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/acoinfo/go-vsoa/protocol"
+	"github.com/acoinfo/vsoa/protocol"
 )
 
 // ServiceError is an error from server.
