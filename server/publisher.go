@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,7 +53,7 @@ func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*pro
 		pubs(req, nil)
 
 		for _, c := range s.clients {
-			if c.Subscribes[servicePath] && c.Authed {
+			if s.isSubscribedToPath(c, servicePath) && c.Authed {
 				wg.Add(1)
 				go func(c *client) {
 					defer wg.Done()
@@ -78,6 +79,37 @@ func (s *Server) publisher(servicePath string, timeOrTrigger any, pubs func(*pro
 
 		cancel()
 	}
+}
+
+func (s *Server) isSubscribedToPath(c *client, servicePath string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Normalize the service path (remove leading/trailing slashes)
+	normServicePath := strings.Trim(servicePath, "/")
+
+	for subPath := range c.Subscribes {
+		// Normalize the subscribed path (remove leading/trailing slashes)
+		normSubPath := strings.Trim(subPath, "/")
+
+		// Case 1: Exact match (e.g. sub /axis matches pub /axis)
+		if normSubPath == normServicePath {
+			return true
+		}
+
+		// Case 2: Root subscription (sub / or empty path matches everything)
+		if normSubPath == "" {
+			return true
+		}
+
+		// Case 3: Prefix match with trailing slash in subscription
+		// (e.g. sub /axis/ matches pub /axis and /axis/...)
+		if strings.HasSuffix(subPath, "/") &&
+			strings.HasPrefix(normServicePath+"/", normSubPath+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // Normal channel Publish Message

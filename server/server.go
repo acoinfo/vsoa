@@ -469,6 +469,12 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 			res.SetStatusType(protocol.StatusInvalidUrl)
 			goto SEND
 		} else if req.IsSubscribe() || req.IsUnSubscribe() {
+			url := string(req.URL)
+			if url == "" || url == "/" {
+				s.subs(req, ClientUid)
+				res.SetStatusType(protocol.StatusSuccess)
+				goto SEND
+			}
 			if _, ok := s.routeMap["SUBS/UNSUBS."+string(req.URL)]; ok &&
 				!strings.HasSuffix(string(req.URL), "/") {
 				s.subs(req, ClientUid)
@@ -693,6 +699,11 @@ func (s *Server) Publish(servicePath string, timeOrTrigger any, pubs func(*proto
 	if pubs == nil {
 		return ErrNilPublishHandler
 	}
+
+	if !strings.HasPrefix(servicePath, "/") {
+		servicePath = "/" + servicePath
+	}
+
 	rawFlag := false
 	switch timeOrTrigger.(type) {
 	case time.Duration:
@@ -776,10 +787,19 @@ func (s *Server) TriggerPublisher(servicePath string) error {
 func (s *Server) subs(req *protocol.Message, ClientUid uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	url := string(req.URL)
+
+	if url == "" {
+		url = "/"
+	} else if !strings.HasPrefix(url, "/") {
+		url = "/" + url
+	}
+
 	if req.IsSubscribe() {
-		s.clients[ClientUid].Subscribes[string(req.URL)] = true
+		s.clients[ClientUid].Subscribes[url] = true
 	} else {
-		s.clients[ClientUid].Subscribes[string(req.URL)] = false
+		delete(s.clients[ClientUid].Subscribes, url)
 	}
 }
 
