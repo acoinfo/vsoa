@@ -34,7 +34,17 @@ func (s strErr) IsServiceError() bool {
 }
 
 // DefaultOption is a common option configuration for client.
-var DefaultOption = Option{}
+var DefaultOption = Option{
+	Password:          "",
+	PingInterval:      30,
+	PingTimeout:       10,
+	PingLost:          3,
+	PingTurbo:         0,
+	ConnectTimeout:    5 * time.Second,
+	ReconnectInterval: 3 * time.Second,
+	AutoReconnect:     false,
+	TLSConfig:         nil,
+}
 
 // ErrShutdown connection is closed.
 var (
@@ -138,8 +148,27 @@ type Client struct {
 // NewClient returns a new Client with the option.
 func NewClient(option Option) *Client {
 	if option.ConnectTimeout == 0 {
-		option.ConnectTimeout = 5 * time.Second
+		option.ConnectTimeout = DefaultOption.ConnectTimeout
 	}
+	if option.ReconnectInterval == 0 {
+		option.ReconnectInterval = DefaultOption.ReconnectInterval
+	}
+	if option.PingInterval == 0 {
+		option.PingInterval = DefaultOption.PingInterval
+	}
+	if option.PingTimeout == 0 {
+		option.PingTimeout = DefaultOption.PingTimeout
+	}
+	if option.PingLost == 0 {
+		option.PingLost = DefaultOption.PingLost
+	}
+	if option.PingTurbo == 0 {
+		option.PingTurbo = DefaultOption.PingTurbo
+	}
+	if !option.AutoReconnect {
+		option.AutoReconnect = DefaultOption.AutoReconnect
+	}
+
 	return &Client{
 		option:           option,
 		authed:           false,
@@ -162,12 +191,14 @@ func (c *Client) GetUid() uint32 {
 
 // Option contains all options for creating clients.
 type Option struct {
-	Password       string
-	PingInterval   int //second
-	PingTimeout    int
-	PingLost       int32
-	PingTurbo      int //millisecond
-	ConnectTimeout time.Duration
+	Password          string
+	PingInterval      int //second
+	PingTimeout       int
+	PingLost          int32
+	PingTurbo         int //millisecond
+	ConnectTimeout    time.Duration
+	AutoReconnect     bool
+	ReconnectInterval time.Duration
 	// TLSConfig for tcp and quic
 	TLSConfig *tls.Config
 }

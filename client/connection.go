@@ -32,6 +32,22 @@ func (client *Client) SetPosition(address string) (err error) {
 // ServInfo Shack hand is needed cause VSOA protocol
 // TODO: add position logic.
 func (client *Client) Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerInfo string, err error) {
+	if !client.option.AutoReconnect {
+		return client.connectOnce(vsoa_or_VSOA_URL, address_or_URL)
+	}
+
+	for {
+		serverInfo, err := client.connectOnce(vsoa_or_VSOA_URL, address_or_URL)
+		if err == nil {
+			return serverInfo, nil
+		}
+
+		log.Printf("Connect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
+		time.Sleep(client.option.ReconnectInterval)
+	}
+}
+
+func (client *Client) connectOnce(vsoa_or_VSOA_URL, address_or_URL string) (ServerInfo string, err error) {
 	var conn net.Conn
 	var qconn *net.UDPConn
 
@@ -166,61 +182,4 @@ func newDirectConn(c *Client, address string) (net.Conn, error) {
 	}
 
 	return conn, nil
-}
-
-// reConnect connects the server via specified network.
-// ServInfo Shack hand is needed cause VSOA protocol
-// TODO: add position logic.
-func (client *Client) reConnect(network string) (err error) {
-	var conn net.Conn
-	var qconn *net.UDPConn
-
-	client.Close()
-	client.clearClient()
-	// Kill input/qinput/pingloop go func before start a new client
-
-	switch network {
-	default:
-		conn, err = newDirectConn(client, client.addr)
-
-		if err == nil && conn != nil {
-			client.Conn = conn
-			client.r = bufio.NewReaderSize(conn, ReaderBuffsize)
-
-			// start reading and writing since connected
-			go client.input()
-		} else {
-			return err
-		}
-
-		qconn, err = newQuickConn(client, client.addr)
-		{
-			if err == nil && qconn != nil {
-				client.QConn = qconn
-				client.qr = bufio.NewReaderSize(qconn, ReaderBuffsize)
-				go client.qinput()
-			} else {
-				return err
-			}
-		}
-	}
-
-	req := protocol.NewMessage()
-
-	reply, err := client.Call("", protocol.TypeServInfo, protocol.RpcMethodGet, req)
-	if err != nil {
-		return err
-	}
-
-	client.mutex.Lock()
-	client.authed = true
-	// this is used for Quick channel
-	client.uid = protocol.GetClientUid(reply.Data)
-	client.mutex.Unlock()
-
-	if client.option.PingInterval != 0 {
-		go client.pingLoop()
-	}
-
-	return err
 }

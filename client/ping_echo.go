@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -28,7 +29,6 @@ func (client *Client) pingEchoLoop() {
 	IntervalTime := time.Duration(client.option.PingInterval) * time.Second
 	ticker := time.NewTicker(IntervalTime)
 
-	// If Server / Client close conn, kill the pingLoop
 	for client.pingTimeoutCount < client.option.PingLost {
 		<-ticker.C
 		req := protocol.NewMessage()
@@ -43,15 +43,30 @@ func (client *Client) pingEchoLoop() {
 			pingTimerOut.Stop()
 		case <-pingTimerOut.C:
 			atomic.AddInt32(&client.pingTimeoutCount, 1)
-			// Will we delete pending? Maybe it's not needed.
 			pingTimerOut.Stop()
 		}
 	}
 
 	ticker.Stop()
-	// This is for Reconnect net-work if Just no respond.(TCP ACK but server respond nothing)
-	client.Close()
-	client.reConnect("vsoa")
+	log.Println("Ping timeout, attempting reconnect...")
+
+	if client.option.AutoReconnect {
+		go func() {
+			for {
+				client.Close()
+				client.clearClient()
+				_, err := client.Connect("VSOA_URL", client.addr)
+				if err == nil {
+					log.Println("Reconnected successfully.")
+					return
+				}
+				log.Printf("Reconnect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
+				time.Sleep(client.option.ReconnectInterval)
+			}
+		}()
+	} else {
+		client.Close()
+	}
 }
 
 func (client *Client) pingTurboLoop() {
