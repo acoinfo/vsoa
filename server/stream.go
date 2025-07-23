@@ -73,14 +73,16 @@ func (ss *ServerStream) ServeListener(pushBuf, receiveBuf *bytes.Buffer) {
 		}
 	} else {
 		go func() {
-			ss.serveConnPush(conn, pushBuf)
+			if pushBuf != nil {
+				ss.serveConnPush(conn, pushBuf)
+			}
 			streamDone <- 1
 		}()
-		ss.serveConnReceive(conn, receiveBuf)
+		if receiveBuf != nil {
+			ss.serveConnReceive(conn, receiveBuf)
+		}
 	}
-
 	<-streamDone
-
 	ss.Ln.Close()
 }
 
