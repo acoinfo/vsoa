@@ -32,11 +32,14 @@ const (
 	MaxQMessageLength = 65507
 )
 
-var bufferPool = utils.NewLimitedPool(512, 4096)
+type QuickChannelFlag bool
 
-func MagicNumber() byte {
-	return magic | (version << 4)
-}
+const (
+	ChannelQuick  QuickChannelFlag = true
+	ChannelNormal QuickChannelFlag = false
+)
+
+var bufferPool = utils.NewLimitedPool(512, 4096)
 
 var (
 	ErrMessageTooLong = errors.New("message is too long")
@@ -47,18 +50,15 @@ const (
 	ServerError = "__vsoa_error__"
 )
 
-type QuickChannelFlag bool
-
-const (
-	ChannelQuick  QuickChannelFlag = true
-	ChannelNormal QuickChannelFlag = false
-)
-
 type Message struct {
 	*Header
 	URL   []byte          // Server PATH for RPC
 	Param json.RawMessage // JSON-encoded parameters
 	Data  []byte          // Raw message data
+}
+
+func MagicNumber() byte {
+	return magic | (version << 4)
 }
 
 func NewMessage() *Message {
@@ -195,6 +195,7 @@ func (m *Message) Encode(quick QuickChannelFlag) ([]byte, error) {
 	uLen, pLen, dLen := len(m.URL), len(m.Param), len(m.Data)
 	total := HdrLength + 10 + uLen + pLen + dLen
 
+	// Calculate padding bytes needed to align total length to 4-byte boundary
 	pad := (4 - (total & 3)) & 3
 	total += pad
 

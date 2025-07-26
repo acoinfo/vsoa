@@ -36,13 +36,13 @@ func (s strErr) IsServiceError() bool {
 // DefaultOption is a common option configuration for client.
 var DefaultOption = Option{
 	Password:          "",
-	PingInterval:      30,
-	PingTimeout:       10,
-	PingLost:          3,
+	PingInterval:      3,
+	PingTimeout:       1,
+	PingLost:          1,
 	PingTurbo:         0,
-	ConnectTimeout:    5 * time.Second,
+	ConnectTimeout:    3 * time.Second,
 	ReconnectInterval: 3 * time.Second,
-	AutoReconnect:     false,
+	AutoReconnect:     true,
 	TLSConfig:         nil,
 }
 
@@ -117,9 +117,9 @@ type Client struct {
 	position string
 	option   Option
 	uid      uint32
-
-	Conn net.Conn
-	r    *bufio.Reader
+	connType string
+	Conn     net.Conn
+	r        *bufio.Reader
 	// Quick Datagram/Publish goes UDPs
 	QConn *net.UDPConn
 	qr    *bufio.Reader
@@ -535,6 +535,21 @@ func (client *Client) handleServerRequest(msg *protocol.Message) {
 		default:
 			log.Panicf("ServerMessageChan may be full so the server request %d has been dropped", msg.SeqNo())
 		}
+	}
+}
+
+// reconnect attempts to reconnect to the server when connection is lost
+func (client *Client) reconnect() {
+	for {
+		client.Close()
+		client.clearClient()
+		_, err := client.Connect(client.connType, client.addr)
+		if err == nil {
+			log.Println("Reconnected successfully.")
+			return
+		}
+		log.Printf("Reconnect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
+		time.Sleep(client.option.ReconnectInterval)
 	}
 }
 

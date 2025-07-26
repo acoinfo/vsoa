@@ -64,5 +64,8 @@ func (client *Client) qinput() {
 			continue
 		}
 	}
-	// Do nothing in quick channel
+
+	if err != nil && !client.closing && !client.shutdown && client.option.AutoReconnect {
+		go client.reconnect()
+	}
 }

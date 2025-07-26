@@ -128,8 +128,9 @@ func (client *Client) input() {
 			err = ErrShutdown
 		} else {
 			// If server aggressive close the client conn.
-			// TODO: reConnection logic
-			err = io.ErrUnexpectedEOF
+			if client.option.AutoReconnect {
+				go client.reconnect()
+			}
 		}
 	}
 	for _, call := range client.pending {
@@ -139,5 +140,8 @@ func (client *Client) input() {
 
 	if err != nil && !client.closing && !client.shutdown {
 		log.Printf("VSOA: client protocol error: %v", err)
+		if client.option.AutoReconnect {
+			go client.reconnect()
+		}
 	}
 }

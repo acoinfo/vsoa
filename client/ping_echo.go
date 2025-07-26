@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -25,47 +26,39 @@ func (client *Client) pingLoop() {
 	client.pingEchoLoop()
 }
 
-func (client *Client) pingEchoLoop() {
-	IntervalTime := time.Duration(client.option.PingInterval) * time.Second
-	ticker := time.NewTicker(IntervalTime)
+func (client *Client) pingOnce() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(client.option.PingTimeout)*time.Second)
+	defer cancel()
 
-	for client.pingTimeoutCount < client.option.PingLost {
-		<-ticker.C
-		req := protocol.NewMessage()
-		reply := protocol.NewMessage()
-		Call := client.Go("", protocol.TypePingEcho, nil, req, reply, nil).Done
-		pingTimerOut := time.NewTimer(time.Second * time.Duration(client.option.PingTimeout))
-		select {
-		case call := <-Call:
-			if call.Error != nil {
-				atomic.StoreInt32(&client.pingTimeoutCount, 0)
-			}
-			pingTimerOut.Stop()
-		case <-pingTimerOut.C:
+	req := protocol.NewMessage()
+	reply := protocol.NewMessage()
+	call := client.Go("", protocol.TypePingEcho, nil, req, reply, nil)
+
+	select {
+	case <-call.Done:
+		if call.Error != nil {
 			atomic.AddInt32(&client.pingTimeoutCount, 1)
-			pingTimerOut.Stop()
+		} else {
+			atomic.StoreInt32(&client.pingTimeoutCount, 0)
 		}
+	case <-ctx.Done():
+		atomic.AddInt32(&client.pingTimeoutCount, 1)
 	}
+}
 
-	ticker.Stop()
-	log.Println("Ping timeout, attempting reconnect...")
+func (client *Client) pingEchoLoop() {
+	ticker := time.NewTicker(time.Duration(client.option.PingInterval) * time.Second)
+	defer ticker.Stop()
 
-	if client.option.AutoReconnect {
-		go func() {
-			for {
-				client.Close()
-				client.clearClient()
-				_, err := client.Connect("VSOA_URL", client.addr)
-				if err == nil {
-					log.Println("Reconnected successfully.")
-					return
-				}
-				log.Printf("Reconnect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
-				time.Sleep(client.option.ReconnectInterval)
+	for range ticker.C {
+		if atomic.LoadInt32(&client.pingTimeoutCount) >= client.option.PingLost {
+			log.Println("Ping timeout, reconnecting...")
+			if client.option.AutoReconnect {
+				go client.reconnect()
 			}
-		}()
-	} else {
-		client.Close()
+			return
+		}
+		client.pingOnce()
 	}
 }
 

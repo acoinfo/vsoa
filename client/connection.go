@@ -52,6 +52,7 @@ func (client *Client) connectOnce(vsoa_or_VSOA_URL, address_or_URL string) (Serv
 	var qconn *net.UDPConn
 
 	client.addr = address_or_URL
+	client.connType = vsoa_or_VSOA_URL
 
 	// check client options is valid
 	if client.option.PingTurbo != 0 {
