@@ -132,6 +132,10 @@ func (client *Client) connectOnce(vsoa_or_VSOA_URL, address_or_URL string) (Serv
 		go client.pingLoop()
 	}
 
+	if client.option.OnConnect != nil {
+		go client.option.OnConnect(client)
+	}
+
 	return protocol.DecodeServInfo(reply.Param), err
 }
 

@@ -201,6 +201,7 @@ type Option struct {
 	ReconnectInterval time.Duration
 	// TLSConfig for tcp and quic
 	TLSConfig *tls.Config
+	OnConnect func(c *Client)
 }
 
 // Call represents an active RPC.
