@@ -589,3 +589,49 @@ func (client *Client) Close() error {
 
 	return err
 }
+
+// Delete completely removes the client, closing all connections and cleaning up resources.
+// Unlike Close(), it ensures no reconnection attempts will be made.
+func (client *Client) Delete() error {
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+
+	// Disable auto-reconnect to prevent any reconnection attempts
+	client.option.AutoReconnect = false
+
+	// Mark as closing to prevent any further operations
+	client.closing = true
+	client.shutdown = true
+
+	// Clean up pending calls
+	for seq, call := range client.pending {
+		delete(client.pending, seq)
+		if call != nil {
+			call.Error = ErrShutdown
+			call.done()
+		}
+	}
+
+	// Close connections
+	var err error
+	if client.QConn != nil {
+		if cerr := client.QConn.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}
+	if client.Conn != nil {
+		if cerr := client.Conn.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}
+
+	// Clear all states
+	client.authed = false
+	client.pingTimeoutCount = 0
+	client.pending = nil
+	client.SubscribeList = nil
+	client.slotList = nil
+	client.ServerMessageChan = nil
+
+	return err
+}
