@@ -611,7 +611,7 @@ func (s *Server) OnClient(handler func(clientUid uint32) (authed bool, err error
 func (s *Server) onClient(ClientUid uint32) (err error) {
 	if s.HandleOnClient == nil {
 		s.authClient(ClientUid, s.option.AutoAuth)
-		return defaultOnClientHandler(ClientUid)
+		return s.defaultOnClientHandler(ClientUid)
 	} else {
 		authed, err := s.HandleOnClient(ClientUid)
 		s.authClient(ClientUid, authed)
@@ -626,8 +626,20 @@ func (s *Server) authClient(ClientUid uint32, authed bool) {
 	s.clients[ClientUid].Authed = authed
 }
 
-func defaultOnClientHandler(clientUid uint32) (err error) {
-	log.Printf("Vsoa client[%d] connected!", clientUid)
+func (s *Server) defaultOnClientHandler(clientUid uint32) (err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if client, ok := s.clients[clientUid]; ok {
+		if client.Conn != nil {
+			remoteAddr := client.Conn.RemoteAddr().String()
+			log.Printf("Vsoa client[%d] connected from: %s", clientUid, remoteAddr)
+		} else {
+			log.Printf("Vsoa client[%d] connected - no connection info", clientUid)
+		}
+	} else {
+		log.Printf("Vsoa client[%d] connected - not found in client map", clientUid)
+	}
 	return nil
 }
 
