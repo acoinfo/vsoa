@@ -41,8 +41,6 @@ func (client *Client) Connect(vsoa_or_VSOA_URL, address_or_URL string) (ServerIn
 		if err == nil {
 			return serverInfo, nil
 		}
-
-		log.Printf("Connect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
 		time.Sleep(client.option.ReconnectInterval)
 	}
 }
