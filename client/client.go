@@ -558,15 +558,24 @@ func (client *Client) handleServerRequest(msg *protocol.Message) {
 
 // reconnect attempts to reconnect to the server when connection is lost
 func (client *Client) reconnect() {
+	log.Println("Start to reconnect to server...")
 	for {
 		client.Close()
 		client.clearClient()
-		_, err := client.Connect(client.connType, client.addr)
+
+		client.mutex.Lock()
+		autoReconnect := client.option.AutoReconnect
+		client.mutex.Unlock()
+
+		if !autoReconnect {
+			return
+		}
+
+		_, err := client.connectOnce(client.connType, client.addr)
 		if err == nil {
 			log.Println("Reconnected successfully.")
 			return
 		}
-		log.Printf("Reconnect failed: %v, retrying in %v...", err, client.option.ReconnectInterval)
 		time.Sleep(client.option.ReconnectInterval)
 	}
 }

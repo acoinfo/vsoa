@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -151,7 +150,6 @@ func newQuickConn(c *Client, address string) (*net.UDPConn, error) {
 
 	qconn, err = net.DialUDP("udp", nil, saddr)
 	if err != nil {
-		log.Printf("failed to dial server quick path: %v", err)
 		return nil, err
 	}
 
@@ -180,7 +178,6 @@ func newDirectConn(c *Client, address string) (net.Conn, error) {
 	}
 
 	if err != nil {
-		log.Printf("failed to dial server: %v", err)
 		return nil, err
 	}
 

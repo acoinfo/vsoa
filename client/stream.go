@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -34,7 +33,6 @@ func (client *Client) NewClientStream(tunid uint16) (cs *ClientStream, err error
 	conn, err = net.DialTimeout("tcp", address, client.option.ConnectTimeout)
 
 	if err != nil {
-		log.Printf("failed to dial server in stream mode: %v", err)
 		return nil, err
 	}
 
