@@ -33,6 +33,14 @@ func (s strErr) IsServiceError() bool {
 	return true
 }
 
+func defaultOnConnect(c *Client) {
+	log.Printf("Client %s connected to %s", c.Conn.RemoteAddr(), c.addr)
+}
+
+func defaultOnDisconnect(c *Client) {
+	log.Printf("Client %s disconnected from %s", c.Conn.RemoteAddr(), c.addr)
+}
+
 // DefaultOption is a common option configuration for client.
 var DefaultOption = Option{
 	Password:          "",
@@ -44,6 +52,8 @@ var DefaultOption = Option{
 	ReconnectInterval: 3 * time.Second,
 	AutoReconnect:     true,
 	TLSConfig:         nil,
+	OnConnect:         defaultOnConnect,
+	OnDisconnect:      defaultOnDisconnect,
 }
 
 // ErrShutdown connection is closed.
@@ -168,6 +178,12 @@ func NewClient(option Option) *Client {
 	if !option.AutoReconnect {
 		option.AutoReconnect = DefaultOption.AutoReconnect
 	}
+	if option.OnConnect == nil {
+		option.OnConnect = DefaultOption.OnConnect
+	}
+	if option.OnDisconnect == nil {
+		option.OnDisconnect = DefaultOption.OnDisconnect
+	}
 
 	return &Client{
 		option:           option,
@@ -200,8 +216,9 @@ type Option struct {
 	AutoReconnect     bool
 	ReconnectInterval time.Duration
 	// TLSConfig for tcp and quic
-	TLSConfig *tls.Config
-	OnConnect func(c *Client)
+	TLSConfig    *tls.Config
+	OnConnect    func(c *Client)
+	OnDisconnect func(c *Client)
 }
 
 // Call represents an active RPC.
@@ -615,7 +632,7 @@ func (client *Client) Delete() error {
 	// Close connections
 	var err error
 	if client.QConn != nil {
-		if cerr := client.QConn.Close(); cerr != nil && err == nil {
+		if cerr := client.QConn.Close(); cerr != nil {
 			err = cerr
 		}
 	}

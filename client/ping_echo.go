@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -52,8 +51,11 @@ func (client *Client) pingEchoLoop() {
 
 	for range ticker.C {
 		if atomic.LoadInt32(&client.pingTimeoutCount) >= client.option.PingLost {
+			if client.option.OnDisconnect != nil {
+				client.option.OnDisconnect(client)
+			}
+
 			if client.option.AutoReconnect {
-				log.Println("Ping timeout, reconnecting...")
 				go client.reconnect()
 			}
 			return
