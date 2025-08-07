@@ -67,6 +67,8 @@ type VsoaServer interface {
 	QuickPublish(servicePath string,
 		timeDriction time.Duration,
 		pubs func(*protocol.Message, *protocol.Message)) (err error)
+	// IsSubscribed checks if the client is subscribed to the service.
+	IsSubscribed(servicePath string) bool
 	// NewServerStream creates a new Stream using tunid in res.
 	NewServerStream(res *protocol.Message) (ss *ServerStream, err error)
 }
@@ -223,6 +225,23 @@ func (s *Server) Count() (count int) {
 		}
 	}
 	return count
+}
+
+// IsSubscribed checks if there are any active clients subscribed to the given servicePath.
+func (s *Server) IsSubscribed(servicePath string) bool {
+	if !strings.HasPrefix(servicePath, "/") {
+		servicePath = "/" + servicePath
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, client := range s.clients {
+		if client.Active && client.Authed && s.isSubscribedToPath(client, servicePath) {
+			return true
+		}
+	}
+	return false
 }
 
 // serveListener accepts incoming connections on the Listener ln,
