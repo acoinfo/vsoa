@@ -5,6 +5,47 @@
 
 ## ChangeLog
 
+### 2025/12/25 V1.1.10
+
+- Fix client auto reconnect set error.
+
+### 2025/08/07 V1.1.9
+
+- Add IsSubscribed API.
+
+### 2025/07/29 V1.1.8
+
+- Add auto reconnect check.
+
+### 2025/07/29 V1.1.7
+
+- Add onconnect/ondisconnect default implementation.
+
+### 2025/07/28 V1.1.6
+
+- Fix defaultOnClientHandler error.
+
+### 2025/07/28 V1.1.5
+
+- Add client delete API.
+
+### 2025/07/28 V1.1.4
+
+- Add client onconnect implementation.
+
+### 2025/07/26 V1.1.3
+
+- Add client reconnect implementation.
+
+### 2025/07/23 V1.1.2
+
+- Fix server connection push error.
+- Fix server connection receive error.
+
+### 2025/07/21 V1.1.1
+
+- Add client default option.
+
 ### 2025/07/16 V1.1.0
 
 - Fix some bugs on Pub/Sub

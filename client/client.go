@@ -175,9 +175,6 @@ func NewClient(option Option) *Client {
 	if option.PingTurbo == 0 {
 		option.PingTurbo = DefaultOption.PingTurbo
 	}
-	if !option.AutoReconnect {
-		option.AutoReconnect = DefaultOption.AutoReconnect
-	}
 	if option.OnConnect == nil {
 		option.OnConnect = DefaultOption.OnConnect
 	}
