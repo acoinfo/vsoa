@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"runtime"
+	"strings"
 
 	"github.com/acoinfo/vsoa/protocol"
 )
@@ -18,39 +19,56 @@ func (s *Server) serveQuickListener(_ string) (err error) {
 	qAddrServer := (*net.UDPAddr)(s.ln.Addr().(*net.TCPAddr))
 	s.qln, err = net.ListenUDP("udp", qAddrServer)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer s.qln.Close()
+	defer func() {
+		if s.qln != nil {
+			_ = s.qln.Close()
+		}
+	}()
+
+	buf := make([]byte, 1024)
 
 	for {
-		buf := make([]byte, 1024)
-		_, addr, err := s.qln.ReadFromUDP(buf)
-		qAddr := addr.String()
+		n, addr, err := s.qln.ReadFromUDP(buf)
 		if err != nil {
+			if s.IsShutdown() || errors.Is(err, net.ErrClosed) ||
+				strings.Contains(err.Error(), "use of closed network connection") {
+				return ErrServerClosed
+			}
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				continue
+			}
+			return err
+		}
+		if addr == nil {
 			continue
-		} else {
-			if clientUid, ok := s.quickChannel[(qAddr)]; ok {
-				if client, ok := s.clients[clientUid]; ok {
-					if client.Active {
-						req := protocol.NewMessage()
-						r := bytes.NewBuffer(buf)
-						err = req.Decode(r)
-						if err != nil {
-							if errors.Is(err, io.EOF) {
-								if s.HandleServiceError == nil {
-									log.Printf("Vsoa client[%d] has closed this connection: %s", clientUid, s.qln.RemoteAddr().String())
-								}
-							}
+		}
 
-							if s.HandleServiceError != nil {
-								s.HandleServiceError(clientUid, err)
+		qAddr := addr.String()
+		if clientUid, ok := s.quickChannel[qAddr]; ok {
+			if client, ok := s.clients[clientUid]; ok {
+				if client.Active {
+					req := protocol.NewMessage()
+					r := bytes.NewBuffer(buf[:n])
+					err = req.Decode(r)
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							if s.HandleServiceError == nil {
+								log.Printf("Vsoa client[%d] has closed this connection: %s", clientUid, qAddr)
 							}
-							return err
 						}
-						go s.processOneQuickRequest(req, clientUid)
+
+						if s.HandleServiceError != nil {
+							s.HandleServiceError(clientUid, err)
+						}
+						return err
 					}
+					go s.processOneQuickRequest(req, clientUid)
 				}
 			}
+		} else {
+			continue
 		}
 	}
 
