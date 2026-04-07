@@ -176,6 +176,9 @@ func (s *Server) Serve(address string) (err error) {
 	}
 
 	s.address = address
+	s.mu.Lock()
+	s.doneChan = make(chan struct{})
+	s.mu.Unlock()
 	s.isStarted.Store(true)
 	s.isShutdown.Store(false)
 
@@ -194,17 +197,29 @@ func (s *Server) Close() (err error) {
 		return nil
 	}
 
+	s.isShutdown.Store(true)
+	s.isStarted.Store(false)
+
 	for cuid := range s.clients {
 		s.closeConn(cuid)
 	}
 
 	s.mu.Lock()
-	s.ln.Close()
-	s.qln.Close()
+	ln := s.ln
+	qln := s.qln
+	doneChan := s.doneChan
+	s.doneChan = nil
 	s.mu.Unlock()
 
-	s.isStarted.Store(false)
-	s.isShutdown.Store(true)
+	if ln != nil {
+		_ = ln.Close()
+	}
+	if qln != nil {
+		_ = qln.Close()
+	}
+	if doneChan != nil {
+		close(doneChan)
+	}
 
 	return nil
 }
@@ -258,7 +273,12 @@ func (s *Server) serveListener(ln net.Listener) error {
 		conn, e := s.ln.Accept()
 		if e != nil {
 			if s.IsShutdown() {
-				<-s.doneChan
+				if s.doneChan != nil {
+					<-s.doneChan
+				}
+				return ErrServerClosed
+			}
+			if errors.Is(e, net.ErrClosed) || strings.Contains(e.Error(), "use of closed network connection") {
 				return ErrServerClosed
 			}
 
@@ -349,7 +369,9 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 
 		// make sure all inflight requests are handled and all drained
 		if s.IsShutdown() {
-			<-s.doneChan
+			if s.doneChan != nil {
+				<-s.doneChan
+			}
 		}
 	}()
 
