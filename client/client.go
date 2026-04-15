@@ -136,6 +136,8 @@ type Client struct {
 
 	// used for server publish
 	SubscribeList map[string]func(m *protocol.Message)
+	// wildcardSubscribers stores URLs ending with "/" for O(1) prefix matching
+	wildcardSubscribers []string
 
 	// used for server publish in lower sampling
 	slotList  map[string]*clientSlot

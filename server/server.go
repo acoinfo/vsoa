@@ -31,9 +31,9 @@ var (
 
 const (
 	// ReaderBuffsize is used for bufio reader.
-	ReaderBuffsize = 1024
+	ReaderBuffsize = 16 * 1024
 	// WriterBuffsize is used for bufio writer.
-	WriterBuffsize = 1024
+	WriterBuffsize = 16 * 1024
 
 	DefaultTimeout = 5 * time.Minute
 )
@@ -107,6 +107,8 @@ type Server struct {
 	routerMapMu sync.RWMutex
 	routeMap    map[string]serverHandler
 	triggerChan map[string]chan struct{}
+	// wildcardRoutes stores routes ending with "/" for O(1) prefix matching
+	wildcardRoutes []string
 
 	mu      sync.RWMutex
 	clients map[uint32]*client
@@ -154,6 +156,7 @@ func NewServer(name string, so Option) *Server {
 		doneChan:     make(chan struct{}),
 		routeMap:     make(map[string]serverHandler),
 		triggerChan:  make(map[string]chan struct{}),
+		wildcardRoutes: make([]string, 0, 16),
 	}
 
 	s.isStarted.Store(false)
@@ -419,7 +422,10 @@ func (s *Server) serveConn(conn net.Conn, ClientUid uint32) {
 		}
 
 		if !req.IsServInfo() {
-			if !s.clients[ClientUid].Active {
+			s.mu.RLock()
+			cli, ok := s.clients[ClientUid]
+			s.mu.RUnlock()
+			if !ok || !cli.Active {
 				// Close unauthed client
 				s.closeConn(ClientUid)
 				log.Printf("auth failed for conn %s: %v", conn.RemoteAddr().String(), protocol.StatusText(protocol.StatusPassword))
@@ -493,16 +499,14 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 				res.SetStatusType(protocol.StatusSuccess)
 				goto SEND
 			}
-			// wdie check if any matches
-			for route, sh := range s.routeMap {
-				// Find one handler and send
-				if strings.HasSuffix(route, "/") &&
+			// wildcard: check routes ending with "/"
+			for _, route := range s.wildcardRoutes {
+				sh := s.routeMap[route]
+				if sh.handler != nil &&
 					strings.HasPrefix("RPC."+
 						req.MessageRpcMethodText()+
 						"."+string(req.URL), route) {
-					if sh.handler != nil {
-						sh.handler(req, res)
-					}
+					sh.handler(req, res)
 					res.SetStatusType(protocol.StatusSuccess)
 					goto SEND
 				}
@@ -566,13 +570,11 @@ func (s *Server) processOneRequest(req *protocol.Message, conn net.Conn, ClientU
 			}
 			return
 		}
-		// wdie check if any matches
-		for route, sh := range s.routeMap {
-			// Find one and return
-			if strings.HasSuffix(route, "/") && strings.HasPrefix("DATAGRAME."+string(req.URL), route) {
-				if sh.handler != nil {
-					sh.handler(req, res)
-				}
+		// wildcard: check routes ending with "/"
+		for _, route := range s.wildcardRoutes {
+			sh := s.routeMap[route]
+			if sh.handler != nil && strings.HasPrefix("DATAGRAME."+string(req.URL), route) {
+				sh.handler(req, res)
 				return
 			}
 		}
@@ -697,10 +699,14 @@ func (s *Server) On(servicePath string, serviceMethod protocol.RpcMessageType, h
 	if handler == nil {
 		return ErrNilHandler
 	}
+	fullRoute := "RPC." + protocol.RpcMethodText(serviceMethod) + "." + servicePath
 	s.routerMapMu.Lock()
 	defer s.routerMapMu.Unlock()
-	if _, ok := s.routeMap["RPC."+protocol.RpcMethodText(serviceMethod)+"."+servicePath]; !ok {
-		s.routeMap["RPC."+protocol.RpcMethodText(serviceMethod)+"."+servicePath] = serverHandler{handler: handler, rawFlag: false}
+	if _, ok := s.routeMap[fullRoute]; !ok {
+		s.routeMap[fullRoute] = serverHandler{handler: handler, rawFlag: false}
+		if strings.HasSuffix(servicePath, "/") {
+			s.wildcardRoutes = append(s.wildcardRoutes, fullRoute)
+		}
 	} else {
 		return ErrAlreadyRegistered
 	}
@@ -708,8 +714,6 @@ func (s *Server) On(servicePath string, serviceMethod protocol.RpcMessageType, h
 }
 
 // OnDatagram adds a DATAGRAME handler to the VsoaServer.
-//
-// It takes in the servicePath string and the handler function, and returns an error.
 func (s *Server) OnDatagram(servicePath string, handler func(*protocol.Message, *protocol.Message)) (err error) {
 	if handler == nil {
 		return ErrNilHandler
@@ -718,6 +722,9 @@ func (s *Server) OnDatagram(servicePath string, handler func(*protocol.Message, 
 	defer s.routerMapMu.Unlock()
 	if _, ok := s.routeMap["DATAGRAME."+servicePath]; !ok {
 		s.routeMap["DATAGRAME."+servicePath] = serverHandler{handler: handler, rawFlag: false}
+		if strings.HasSuffix(servicePath, "/") {
+			s.wildcardRoutes = append(s.wildcardRoutes, "DATAGRAME."+servicePath)
+		}
 	} else {
 		return ErrAlreadyRegistered
 	}

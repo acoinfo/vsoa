@@ -71,21 +71,19 @@ func (client *Client) connectOnce(vsoa_or_VSOA_URL, address_or_URL string) (Serv
 		p := new(position.Position)
 
 		parts := strings.Split(address_or_URL, "://")
-		if len(parts) != 2 {
-			err := p.LookUp(address_or_URL, client.position, 500*time.Millisecond)
+		if len(parts) == 2 {
+			err := p.LookUp(parts[1], client.position, 500*time.Millisecond)
 			if err != nil {
 				return "", err
 			}
 		} else {
-			parts := strings.Split(address_or_URL, "://")
-			err := p.LookUp(parts[1], client.position, 500*time.Millisecond)
+			err := p.LookUp(address_or_URL, client.position, 500*time.Millisecond)
 			if err != nil {
 				return "", err
 			}
 		}
 
 		client.addr = p.IP + ":" + strconv.Itoa(p.Port)
-		println("client.addr", client.addr)
 		fallthrough
 	default:
 		conn, err = newDirectConn(client, client.addr)

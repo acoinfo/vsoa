@@ -45,26 +45,27 @@ func (client *Client) input() {
 				client.regulatorUpdator(res)
 				continue
 			}
-			routelen := 0
-			savedAct := func(m *protocol.Message) {}
-			for route, actor := range client.SubscribeList {
-				// Find one handler and send
-				if strings.HasSuffix(route, "/") &&
-					strings.HasPrefix(string(res.URL), route) {
-					if len(route) < routelen {
-						continue
-					} else {
-						routelen = len(route)
-						savedAct = actor
-					}
+		// wildcard: use pre-indexed list for O(1) matching
+		client.mutex.Lock()
+		wildcards := client.wildcardSubscribers
+		client.mutex.Unlock()
+
+		routelen := 0
+		savedAct := func(m *protocol.Message) {}
+		for _, route := range wildcards {
+			if strings.HasPrefix(string(res.URL), route) {
+				if len(route) > routelen {
+					routelen = len(route)
+					savedAct = client.SubscribeList[route]
 				}
 			}
-			if savedAct != nil {
-				savedAct(res)
-			}
-			client.regulatorUpdator(res)
-			continue
 		}
+		if savedAct != nil {
+			savedAct(res)
+		}
+		client.regulatorUpdator(res)
+		continue
+	}
 
 		seq := res.SeqNo()
 		var call *Call
