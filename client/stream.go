@@ -44,13 +44,23 @@ func (client *Client) NewClientStream(tunid uint16) (cs *ClientStream, err error
 }
 
 func (cs *ClientStream) StopClientStream() (err error) {
+	if cs == nil || cs.conn == nil {
+		return nil
+	}
 	return cs.conn.Close()
 }
 
 func (cs *ClientStream) Read(buf []byte) (int, error) {
+	if cs == nil || cs.conn == nil {
+		return 0, io.EOF
+	}
 	return cs.conn.Read(buf)
 }
 
-func (cs *ClientStream) Write(writeBuf *bytes.Buffer) {
-	io.CopyN(cs.conn, writeBuf, int64(writeBuf.Len()))
+func (cs *ClientStream) Write(writeBuf []byte) error {
+	if cs == nil || cs.conn == nil {
+		return io.EOF
+	}
+	_, err := io.CopyN(cs.conn, bytes.NewBuffer(writeBuf), int64(len(writeBuf)))
+	return err
 }

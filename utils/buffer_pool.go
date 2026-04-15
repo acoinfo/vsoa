@@ -88,16 +88,12 @@ func (p *LimitedPool) findPool(size int, opType int) *levelPool {
 	}
 	idx := p.indexMap[size]
 	if idx == 0 && size != p.minSize {
-		if opType == POOL_GET {
-			// For Get, find the next available pool
-			for i := 1; i < len(p.indexMap); i++ {
-				if p.indexMap[i] != 0 {
-					idx = p.indexMap[i]
-					break
-				}
+		// size falls in a gap between pool sizes; find the closest larger pool
+		for i := 1; i < len(p.indexMap); i++ {
+			if p.indexMap[i] != 0 {
+				idx = p.indexMap[i]
+				break
 			}
-		} else {
-			return nil
 		}
 	}
 	return p.pools[idx]
@@ -123,8 +119,9 @@ func (p *LimitedPool) Put(b *[]byte) {
 	if sp == nil {
 		return
 	}
+	// Reset slice length to capacity for reuse
 	*b = (*b)[:cap(*b)]
-	// Clear the slice content to avoid memory fragmentation
+	// Zero out the slice content to avoid leaking data to next user
 	for i := range *b {
 		(*b)[i] = 0
 	}

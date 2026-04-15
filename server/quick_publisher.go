@@ -52,11 +52,11 @@ func (s *Server) qsendMessage(req *protocol.Message, qAddr *net.UDPAddr) error {
 
 	tmp, err := req.Encode(protocol.ChannelNormal)
 	if err != nil {
-		log.Panicln(err)
+		log.Printf("failed to encode publish message: %v", err)
 		return err
 	}
 
-	s.qln.WriteToUDP(tmp, qAddr)
+	_, err = s.qln.WriteToUDP(tmp, qAddr)
 	protocol.PutData(&tmp)
 
 	return err

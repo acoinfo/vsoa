@@ -20,7 +20,6 @@ func (pl *PositionList) ServePositionListener(address net.UDPAddr) (err error) {
 	for {
 		buf := make([]byte, 1024)
 		n, addr, err := pln.ReadFromUDP(buf)
-		//_, _, err = pln.ReadFromUDP(buf)
 		if err != nil {
 			continue
 		} else {

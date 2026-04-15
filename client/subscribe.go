@@ -37,6 +37,9 @@ func (client *Client) Subscribe(URL string, onPublish func(m *protocol.Message))
 		} else {
 			client.SubscribeList[URL] = defaultOnPublish
 		}
+		if strings.HasSuffix(URL, "/") {
+			client.wildcardSubscribers = append(client.wildcardSubscribers, URL)
+		}
 	}
 	return err
 }
@@ -60,18 +63,24 @@ func (client *Client) UnSubscribe(URL string) error {
 		return nil
 	}
 
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+
+	deleted := false
 	if _, ok := client.SubscribeList[URL]; ok {
-		client.mutex.Lock()
 		delete(client.SubscribeList, URL)
-		client.mutex.Unlock()
+		deleted = true
 	} else if strings.HasSuffix(URL, "/") {
 		if client.SubscribeList[URL[:len(URL)-1]] != nil {
-			client.mutex.Lock()
 			delete(client.SubscribeList, URL[:len(URL)-1])
-			client.mutex.Unlock()
+			deleted = true
 		}
 		// Already unSubscribe
 		return nil
+	}
+
+	if deleted {
+		client.wildcardSubscribers = removeWildcard(client.wildcardSubscribers, URL)
 	}
 
 	req := protocol.NewMessage()
@@ -91,6 +100,16 @@ func defaultOnPublish(m *protocol.Message) {
 // Client send Sub/UnSub message
 // Similar to RPC call
 // Internal use. User should call Subscribe
+func removeWildcard(list []string, url string) []string {
+	for i, v := range list {
+		if v == url {
+			return append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
+}
+
+// sendSubscribe sends Subscribe/UnSubscribe messages to the server
 func (client *Client) sendSubscribe(call *Call, isSubscribe bool) {
 	// If it's Subscribe call Register this call.
 	client.mutex.Lock()
